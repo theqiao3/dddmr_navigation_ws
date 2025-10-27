@@ -228,6 +228,21 @@ ament_target_dependencies(optimized_icp_gn_playground
   ${dependencies}
 )
 
+#lego loam lidar2depth_img node
+add_executable(lego_loam_bag_lidar2depthimg_node
+  src/lego_loam_bag_lidar2depthimg_node.cpp
+)
+target_link_libraries(lego_loam_bag_lidar2depthimg_node 
+  interactive_pose_graph_editor
+  image_projection
+  feature_association
+  map_optimization
+  gtsam
+)
+ament_target_dependencies(lego_loam_bag_lidar2depthimg_node
+  ${dependencies}
+)
+
 install(TARGETS
   opt_icp_gn
   image_projection
@@ -248,6 +263,7 @@ install(TARGETS
   pose_graph_editor_node
   pointcloud2occupancy
   optimized_icp_gn_playground
+  lego_loam_bag_lidar2depthimg_node
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 

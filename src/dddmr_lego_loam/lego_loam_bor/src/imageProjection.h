@@ -32,6 +32,9 @@ class ImageProjection : public rclcpp::Node
     
     void cloudHandler(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
     void tfInitial();
+    
+    bool to_fa_;
+    std::string mapping_dir_string_;
 
   private:
 
@@ -112,6 +115,9 @@ class ImageProjection : public rclcpp::Node
     geometry_msgs::msg::TransformStamped trans_c2b_;
     
     std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_static_broadcaster_;
+    
+    double last_save_depth_img_time_;
+    double time_step_between_depth_image_;
 };
 
 

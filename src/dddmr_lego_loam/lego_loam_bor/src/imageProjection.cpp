@@ -38,7 +38,8 @@ ImageProjection::ImageProjection(std::string name, Channel<ProjectionOut>& outpu
   //supress the no intensity found log
   pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
   clock_ = this->get_clock();
-  
+  last_save_depth_img_time_ = 0;
+
   tf_static_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
   _pub_projected_image = this->create_publisher<sensor_msgs::msg::Image>("projected_image", 1);
 
@@ -128,7 +129,14 @@ ImageProjection::ImageProjection(std::string name, Channel<ProjectionOut>& outpu
   this->get_parameter("imageProjection.distance_for_patch_between_rings", distance_for_patch_between_rings_);
   RCLCPP_INFO(this->get_logger(), "imageProjection.distance_for_patch_between_rings: %.2f", distance_for_patch_between_rings_);
 
-
+  declare_parameter("imageProjection.to_fa", rclcpp::ParameterValue(true));
+  this->get_parameter("imageProjection.to_fa", to_fa_);
+  RCLCPP_INFO(this->get_logger(), "imageProjection.to_fa: %d", to_fa_);
+  
+  declare_parameter("imageProjection.time_step_between_depth_image", rclcpp::ParameterValue(0.5));
+  this->get_parameter("imageProjection.time_step_between_depth_image", time_step_between_depth_image_);
+  RCLCPP_INFO(this->get_logger(), "imageProjection.time_step_between_depth_image: %.2f", time_step_between_depth_image_);
+  
   const size_t cloud_size = _vertical_scans * _horizontal_scans;
 
   _laser_cloud_in.reset(new pcl::PointCloud<PointType>());
@@ -317,7 +325,7 @@ void ImageProjection::cloudHandler(
 void ImageProjection::projectPointCloud() {
   
   //cv image
-  cv::Mat projected_image(_vertical_scans, _horizontal_scans, CV_16UC1, cv::Scalar(0));
+  cv::Mat projected_image(_vertical_scans, _horizontal_scans, CV_8UC1, cv::Scalar(0));
   
   // range image projection
   const size_t cloudSize = _laser_cloud_in->points.size();
@@ -371,7 +379,7 @@ void ImageProjection::projectPointCloud() {
     if(viscolumnIdn>=_horizontal_scans)
       viscolumnIdn = viscolumnIdn - _horizontal_scans;
     if(rowIdn>0 && rowIdn<=_vertical_scans && viscolumnIdn<_horizontal_scans && viscolumnIdn>=0)
-      projected_image.at<unsigned short>(_vertical_scans-rowIdn, viscolumnIdn) = static_cast<unsigned short>(range*1000);
+      projected_image.at<unsigned char>(_vertical_scans-rowIdn, viscolumnIdn) = static_cast<unsigned char>(range*51);
 
     thisPoint.intensity = (float)rowIdn + (float)columnIdn / 10000.0;
     size_t index = columnIdn + rowIdn * _horizontal_scans;
@@ -383,9 +391,35 @@ void ImageProjection::projectPointCloud() {
 
   cv_bridge::CvImage img_bridge;
   img_bridge.image = projected_image;
-  img_bridge.encoding = sensor_msgs::image_encodings::TYPE_16UC1;
+  img_bridge.encoding = sensor_msgs::image_encodings::TYPE_8UC1;
   sensor_msgs::msg::Image::SharedPtr msg = img_bridge.toImageMsg();
   _pub_projected_image->publish(*msg);
+
+  //@ write depth img
+  double imge_time = _seg_msg.header.stamp.sec + _seg_msg.header.stamp.nanosec/1e9;
+
+  if(!to_fa_ && imge_time - last_save_depth_img_time_ >= time_step_between_depth_image_){
+    /*
+    cv::Mat mat_color_8 = cv::Mat(projected_image.rows, projected_image.cols, CV_8UC3);   // container for false-color version
+
+    for (int di=0; di<projected_image.rows; di++){
+      for (int dj=0; dj<projected_image.cols; dj++){
+        ushort val = projected_image.at<ushort>(di,dj);
+        mat_color_8.at<cv::Vec3b>(di,dj)[0] = val;
+        mat_color_8.at<cv::Vec3b>(di,dj)[1] = val;
+        mat_color_8.at<cv::Vec3b>(di,dj)[2] = val;
+      }
+    }
+    */
+    std::string timestamp;
+    std::stringstream ss;
+    ss << _seg_msg.header.stamp.sec << "_" << std::setw(9) << std::setfill('0') << _seg_msg.header.stamp.nanosec;
+    timestamp = ss.str();
+    std::string file_name = mapping_dir_string_ + "/" + timestamp + ".png";
+    cv::imwrite(file_name, projected_image);
+    last_save_depth_img_time_ = imge_time;
+  }
+
 }
 
 void ImageProjection::findStartEndAngle() {
@@ -722,8 +756,8 @@ void ImageProjection::publishClouds() {
   std::swap(out.segmented_cloud, _segmented_cloud);
   std::swap(out.patched_ground, patched_ground_);
   std::swap(out.patched_ground_edge, patched_ground_edge_);
-
-  _output_channel.send( std::move(out) );
+  if(to_fa_)
+    _output_channel.send( std::move(out) );
   first_frame_processed_++;
 
 }
