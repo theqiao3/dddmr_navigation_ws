@@ -248,11 +248,11 @@ ament_target_dependencies(lego_loam_bag_lidar2depthimg_node
 #--- Everything below require CUDA ---
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "cmake")
-add_subdirectory(src/yolo_trt/tensorrt-cpp-api)
+add_subdirectory(src/yolo/yolo_trt/tensorrt-cpp-api)
 
-add_library(YoloV8_TRT SHARED src/yolo_trt/yolov8.cpp)
+add_library(YoloV8_TRT SHARED src/yolo/yolo_trt/yolov8.cpp)
 target_link_libraries(YoloV8_TRT PUBLIC tensorrt_cpp_api ${OpenCV_LIBRARIES})
-target_include_directories(YoloV8_TRT PUBLIC src/yolo_trt/tensorrt-cpp-api/src)
+target_include_directories(YoloV8_TRT PUBLIC src/yolo/yolo_trt/tensorrt-cpp-api/src)
 
 #yolo ros2 test node
 add_executable(yolo_ros2_image_sub
@@ -268,7 +268,7 @@ ament_target_dependencies(yolo_ros2_image_sub
 
 # yolo lego loam ip
 add_library(yolo_image_projection SHARED
-  src/yoloImageProjection.cpp
+  src/yolo/yoloImageProjection.cpp
 )
 target_link_libraries(yolo_image_projection
   ${PCL_LIBRARIES}
@@ -276,6 +276,22 @@ target_link_libraries(yolo_image_projection
   YoloV8_TRT
 )
 ament_target_dependencies(yolo_image_projection
+  ${dependencies}
+)
+
+#lego loam yolo bag node
+add_executable(lego_loam_yolo_bag
+  src/yolo/lego_loam_yolo_bag_node.cpp
+)
+target_link_libraries(lego_loam_yolo_bag 
+  interactive_pose_graph_editor
+  yolo_image_projection
+  feature_association
+  map_optimization
+  gtsam
+  YoloV8_TRT
+)
+ament_target_dependencies(lego_loam_yolo_bag
   ${dependencies}
 )
 
@@ -303,6 +319,7 @@ install(TARGETS
   optimized_icp_gn_playground
   lego_loam_bag_lidar2depthimg_node
   yolo_ros2_image_sub
+  lego_loam_yolo_bag
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 

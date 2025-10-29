@@ -113,11 +113,15 @@ class ImageProjection : public rclcpp::Node
     tf2::Transform tf2_trans_b2s_, tf2_trans_c2s_, tf2_trans_c2b_;
     geometry_msgs::msg::TransformStamped trans_c2s_;
     geometry_msgs::msg::TransformStamped trans_c2b_;
-    
+
+    //@ list of pointcloud sticher for non-repetitive scan lidar
+    std::list<pcl::PointCloud<PointType>> pcl_stitcher_;
     std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_static_broadcaster_;
-    
+
     double last_save_depth_img_time_;
     double time_step_between_depth_image_;
+    
+    int stitcher_num_;
 };
 
 

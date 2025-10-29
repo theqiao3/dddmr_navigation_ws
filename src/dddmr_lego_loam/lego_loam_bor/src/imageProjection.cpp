@@ -137,6 +137,11 @@ ImageProjection::ImageProjection(std::string name, Channel<ProjectionOut>& outpu
   this->get_parameter("imageProjection.time_step_between_depth_image", time_step_between_depth_image_);
   RCLCPP_INFO(this->get_logger(), "imageProjection.time_step_between_depth_image: %.2f", time_step_between_depth_image_);
   
+  declare_parameter("imageProjection.stitcher_num", rclcpp::ParameterValue(0));
+  this->get_parameter("imageProjection.stitcher_num", stitcher_num_);
+  RCLCPP_INFO(this->get_logger(), "imageProjection.stitcher_num: %d", stitcher_num_);
+
+  
   const size_t cloud_size = _vertical_scans * _horizontal_scans;
 
   _laser_cloud_in.reset(new pcl::PointCloud<PointType>());
@@ -293,10 +298,30 @@ void ImageProjection::cloudHandler(
 
   resetParameters();
 
-  // Copy and remove NAN points
   pcl::fromROSMsg(*laserCloudMsg, *_laser_cloud_in);
   std::vector<int> indices;
   pcl::removeNaNFromPointCloud(*_laser_cloud_in, *_laser_cloud_in, indices);
+
+  //@if not stitch, save copy time
+  pcl::PointCloud<PointType>::Ptr pcl_stitched_msg (new pcl::PointCloud<PointType>);
+  if(stitcher_num_<=0){
+  }
+  else{
+    if(pcl_stitcher_.size()<stitcher_num_){
+      pcl_stitcher_.push_back(*_laser_cloud_in);
+    }
+    else{
+      pcl_stitcher_.pop_front();
+      pcl_stitcher_.push_back(*_laser_cloud_in);
+    }
+    
+    for(auto si=pcl_stitcher_.begin(); si!=pcl_stitcher_.end();si++){
+      *pcl_stitched_msg += (*si);
+    }
+    *_laser_cloud_in = *pcl_stitched_msg;
+  }
+
+  _seg_msg.header = laserCloudMsg->header;
   _seg_msg.header.stamp = laserCloudMsg->header.stamp;
   _seg_msg.header.frame_id = laserCloudMsg->header.frame_id+"_pitch_removed";
 

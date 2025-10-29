@@ -1,10 +1,10 @@
 bag_reader:
   ros__parameters:
     use_sim_time: true
-    bag_file_dir: "/root/dddmr_bags/weiwuyin_back_side"
-    point_cloud_topic: "/lslidar_point_cloud"
+    bag_file_dir: "/root/dddmr_bags/stair_livox360"
+    point_cloud_topic: "/velodyne_points"
     odometry_topic: "/odom"
-    skip_frame: 2
+    skip_frame: 1
 
 lego_loam_ip:
   ros__parameters:
@@ -13,11 +13,11 @@ lego_loam_ip:
     laser:
         odom_type: "laser_odometry"         #wheel_odometry/laser_odometry 
         baselink_frame: "base_link"
-        num_vertical_scans: 16
-        num_horizontal_scans: 1000
-        ground_scan_index: 7
-        vertical_angle_bottom: -15.0          # degrees
-        vertical_angle_top: 15.0            # degrees
+        num_vertical_scans: 32
+        num_horizontal_scans: 200
+        ground_scan_index: 14
+        vertical_angle_bottom: -52.0          # degrees
+        vertical_angle_top: 52.0            # degrees
         scan_period: 0.1                   # seconds
 
     imageProjection:
@@ -27,6 +27,9 @@ lego_loam_ip:
         minimum_detection_range: 0.5
         maximum_detection_range: 100.0            # point cloud within this range will be used to project image
         distance_for_patch_between_rings: 1.0    # patch ground between rings within this range, i.e. ring0 and ring1 is smaller than 1 meter, patch them
+        stitcher_num: 5
+        trt_model_path: "/root/dddmr/src/dddmr_lego_loam/lego_loam_bor/engine/yolo11n-stair.trt"
+
 lego_loam_fa:
   ros__parameters:
     use_sim_time: true
@@ -43,13 +46,13 @@ lego_loam_mo:
     use_sim_time: true
     mapping:
 
-        distance_between_key_frame: 1.0
-        angle_between_key_frame: 1.0
+        distance_between_key_frame: 0.2
+        angle_between_key_frame: 0.2
 
         enable_loop_closure: true
 
         surrounding_keyframe_search_num: 20
-        history_keyframe_search_radius: 12.0
+        history_keyframe_search_radius: 2.0
         history_keyframe_search_num: 5
         history_keyframe_fitness_score: 0.5
         
