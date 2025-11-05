@@ -989,8 +989,17 @@ bool MapOptimization::detectLoopClosure() {
   pass.filter (*latestSurfKeyFrameCloudBaseLinkFrame_Pass);
 
   if( latestSurfKeyFrameCloudBaseLinkFrame_Pass->points.size() > original_size/2){
-    RCLCPP_WARN(this->get_logger(), "Too clustered! In range: %lu, overall: %lu, ignore loop closure.", latestSurfKeyFrameCloudBaseLinkFrame_Pass->points.size(), original_size);
-    return false;
+    double dx = cloudKeyPoses6D->points[latestFrameIDLoopCloure].x - cloudKeyPoses6D->points[closestHistoryFrameID].x;
+    double dy = cloudKeyPoses6D->points[latestFrameIDLoopCloure].y - cloudKeyPoses6D->points[closestHistoryFrameID].y;
+    double dz = cloudKeyPoses6D->points[latestFrameIDLoopCloure].z - cloudKeyPoses6D->points[closestHistoryFrameID].z;
+    if(sqrt(dx*dx+dy*dy+dz*dz)<1.0){
+
+    }
+    else{
+      RCLCPP_WARN(this->get_logger(), "Too clustered! In range: %lu points, overall: %lu points. Distance between two frame is higher than 1.0 m, ignore loop closure.", latestSurfKeyFrameCloudBaseLinkFrame_Pass->points.size(), original_size);
+      return false;
+    }
+
   }
   
   // check continuity between two frame from current to candidate

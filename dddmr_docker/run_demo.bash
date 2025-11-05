@@ -3,7 +3,7 @@
 xhost +local:docker
 
 is_x64=$(docker image ls dddmr | grep x64)
-is_cuda=$(docker image ls dddmr | grep 12.6)
+is_cuda=$(docker image ls dddmr | grep cuda)
 is_l4t_r36=$(docker image ls dddmr | grep l4t_r36)
 if [ "$is_cuda" != "" ] ;then 
     docker run -it \
@@ -19,7 +19,7 @@ if [ "$is_cuda" != "" ] ;then
         --volume="${HOME}/dddmr_bags:/root/dddmr_bags" \
         --volume="${HOME}/dddmr_navigation:/root/dddmr_navigation" \
         --name="dddmr_humble_dev" \
-        dddmr:pytorch2.5.1-cuda12.6-cudnn9-tensorrt10.7
+        dddmr:cuda
 elif [ "$is_x64" != "" ] ;then 
     docker run -it \
         --privileged \

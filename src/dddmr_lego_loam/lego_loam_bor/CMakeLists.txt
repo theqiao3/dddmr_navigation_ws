@@ -31,8 +31,9 @@ find_package(pcl_conversions REQUIRED)
 find_package(Boost REQUIRED COMPONENTS filesystem serialization system thread date_time regex timer chrono)
 find_package(GTSAM REQUIRED)
 find_package(PCL 1.15 REQUIRED QUIET)
-find_package(OpenCV QUIET)
+find_package(OpenCV REQUIRED)
 find_package(cv_bridge REQUIRED)
+find_package(image_geometry REQUIRED)
 
 set(dependencies
   rclcpp
@@ -57,12 +58,14 @@ set(dependencies
   rosbag2_storage
   cloud_msgs
   cv_bridge
+  image_geometry
 )
 
 include_directories(
   include
   ${PCL_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 # opt_icp_gn
@@ -207,7 +210,7 @@ ament_target_dependencies(pose_graph_editor_node
 
 #pointcloud to occupancy node
 add_executable(pointcloud2occupancy
-  src/pointcloud2occupancy/pointcloud2occupancy.cpp
+  src/utils/pointcloud2occupancy.cpp
 )
 target_link_libraries(pointcloud2occupancy 
   ${PCL_LIBRARIES}
@@ -230,7 +233,7 @@ ament_target_dependencies(optimized_icp_gn_playground
 
 #lego loam lidar2depth_img node
 add_executable(lego_loam_bag_lidar2depthimg_node
-  src/lego_loam_bag_lidar2depthimg_node.cpp
+  src/utils/lego_loam_bag_lidar2depthimg_node.cpp
 )
 target_link_libraries(lego_loam_bag_lidar2depthimg_node 
   interactive_pose_graph_editor
@@ -242,6 +245,84 @@ target_link_libraries(lego_loam_bag_lidar2depthimg_node
 ament_target_dependencies(lego_loam_bag_lidar2depthimg_node
   ${dependencies}
 )
+
+#--- Everything below require CUDA ---
+
+#Check yolo build flag
+if(NOT TRT_ENABLED)
+    set(TRT_ENABLED OFF CACHE BOOL "Enable or disable TensorRT")
+endif()
+
+if(TRT_ENABLED)
+  message(STATUS "TensorRT is enabled. Compiling TensorRT and Yolo")
+  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "cmake")
+  add_subdirectory(src/yolo/yolo_trt/tensorrt-cpp-api)
+
+  add_library(YoloV8_TRT SHARED src/yolo/yolo_trt/yolov8.cpp)
+  target_link_libraries(YoloV8_TRT PUBLIC tensorrt_cpp_api ${OpenCV_LIBRARIES})
+  target_include_directories(YoloV8_TRT PUBLIC src/yolo/yolo_trt/tensorrt-cpp-api/src)
+
+  #yolo ros2 test node
+  add_executable(yolo_ros2_image_sub
+    src/utils/yolo_ros2_image_sub.cpp
+  )
+  target_link_libraries(yolo_ros2_image_sub 
+    ${OpenCV_LIBRARIES}
+    YoloV8_TRT
+  )
+  ament_target_dependencies(yolo_ros2_image_sub
+    ${dependencies}
+  )
+
+  # yolo lego loam ip
+  add_library(yolo_image_projection SHARED
+    src/yolo/yoloImageProjection.cpp
+  )
+  target_link_libraries(yolo_image_projection
+    ${PCL_LIBRARIES}
+    ${OpenCV_LIBRARIES}
+    YoloV8_TRT
+  )
+  ament_target_dependencies(yolo_image_projection
+    ${dependencies}
+  )
+
+  #lego loam yolo bag node
+  add_executable(lego_loam_yolo_bag
+    src/yolo/lego_loam_yolo_bag_node.cpp
+  )
+  target_link_libraries(lego_loam_yolo_bag 
+    interactive_pose_graph_editor
+    yolo_image_projection
+    feature_association
+    map_optimization
+    gtsam
+    YoloV8_TRT
+  )
+  ament_target_dependencies(lego_loam_yolo_bag
+    ${dependencies}
+  )
+
+  install(TARGETS
+    YoloV8_TRT
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+  )
+
+  #install node
+  install(TARGETS
+    yolo_ros2_image_sub
+    lego_loam_yolo_bag
+    RUNTIME DESTINATION lib/${PROJECT_NAME}
+  )
+
+  ament_export_libraries(YoloV8_TRT)
+  # --- Everything CUDA finish here ---
+
+else()
+    message(STATUS "TensorRT is disabled.")
+endif()
 
 install(TARGETS
   opt_icp_gn
@@ -276,6 +357,7 @@ install(DIRECTORY
   config
   rviz
   pcd
+  engine
   DESTINATION share/${PROJECT_NAME}/
 )
 

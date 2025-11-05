@@ -2,11 +2,11 @@
 
 xhost +local:docker
 
-is_cuda=$(docker image ls dddmr | grep 12.6)
+is_cuda=$(docker image ls dddmr | grep cuda)
 is_l4t_r36=$(docker image ls dddmr | grep l4t_r36)
 
 if [ "$is_cuda" != "" ] ;then
-    echo "Detect image of dddmr:pytorch2.5.1-cuda12.6-cudnn9-tensorrt10.7"
+    echo "Detect image of dddmr:cuda"
     echo "Enter ROS_DOMAIN_ID you want for the container."
     read domain_id
     docker run -it \
@@ -23,7 +23,7 @@ if [ "$is_cuda" != "" ] ;then
         --volume="${HOME}/dddmr_bags:/root/dddmr_bags" \
         --volume="${HOME}/dddmr_navigation:/root/dddmr_navigation" \
         --name="dddmr_humble_cuda_dev" \
-        dddmr:pytorch2.5.1-cuda12.6-cudnn9-tensorrt10.7
+        dddmr:cuda
 elif [ "$is_l4t_r36" != "" ] ;then 
     echo "Detect image of dddmr:l4t_r36"
     echo "Enter ROS_DOMAIN_ID you want for the container."

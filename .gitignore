@@ -174,3 +174,5 @@ cython_debug/
 /log
 
 *.trt
+*.pt
+*.onnx

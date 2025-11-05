@@ -1,5 +1,5 @@
-#ifndef IMAGEPROJECTION_H
-#define IMAGEPROJECTION_H
+#ifndef YOLOIMAGEPROJECTION_H
+#define YOLOIMAGEPROJECTION_H
 
 #include "utility.h"
 #include "channel.h"
@@ -22,13 +22,16 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/opencv.hpp>
 
-class ImageProjection : public rclcpp::Node 
+#include "yolov8.h"
+#include <opencv2/cudaimgproc.hpp>
+
+class YoloImageProjection : public rclcpp::Node 
 {
   public:
 
-    ImageProjection(std::string name, Channel<ProjectionOut>& output_channel);
+    YoloImageProjection(std::string name, Channel<ProjectionOut>& output_channel);
 
-    ~ImageProjection() = default;
+    ~YoloImageProjection() = default;
     
     void cloudHandler(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
     void tfInitial();
@@ -113,13 +116,20 @@ class ImageProjection : public rclcpp::Node
     tf2::Transform tf2_trans_b2s_, tf2_trans_c2s_, tf2_trans_c2b_;
     geometry_msgs::msg::TransformStamped trans_c2s_;
     geometry_msgs::msg::TransformStamped trans_c2b_;
-    
+
+    //@ list of pointcloud sticher for non-repetitive scan lidar
+    std::list<pcl::PointCloud<PointType>> pcl_stitcher_;    
     std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_static_broadcaster_;
     
     double last_save_depth_img_time_;
     double time_step_between_depth_image_;
+    
+    int stitcher_num_;
+    
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr pub_annotated_img_;
+
+    std::string trt_model_path_;
+    std::shared_ptr<YoloV8> yolov8_;
 };
 
-
-
-#endif  // IMAGEPROJECTION_H
+#endif  // YOLOIMAGEPROJECTION_H

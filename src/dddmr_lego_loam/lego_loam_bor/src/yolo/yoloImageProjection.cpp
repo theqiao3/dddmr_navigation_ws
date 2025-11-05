@@ -27,11 +27,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/circular_buffer.hpp>
-#include "imageProjection.h"
+#include "yoloImageProjection.h"
 
 using std::placeholders::_1;
 
-ImageProjection::ImageProjection(std::string name, Channel<ProjectionOut>& output_channel)
+YoloImageProjection::YoloImageProjection(std::string name, Channel<ProjectionOut>& output_channel)
     : Node(name), _output_channel(output_channel), first_frame_processed_(0), got_baselink2sensor_tf_(false)
 {
 
@@ -45,7 +45,7 @@ ImageProjection::ImageProjection(std::string name, Channel<ProjectionOut>& outpu
 
   _sub_laser_cloud = this->create_subscription<sensor_msgs::msg::PointCloud2>(
         "lslidar_point_cloud", 2,
-        std::bind(&ImageProjection::cloudHandler, this, std::placeholders::_1));
+        std::bind(&YoloImageProjection::cloudHandler, this, std::placeholders::_1));
 
   _pub_full_info_cloud = this->create_publisher<sensor_msgs::msg::PointCloud2>
       ("full_cloud_info", 1);  
@@ -64,6 +64,8 @@ ImageProjection::ImageProjection(std::string name, Channel<ProjectionOut>& outpu
 
   _pub_outlier_cloud = this->create_publisher<sensor_msgs::msg::PointCloud2>
       ("outlier_cloud", 1); 
+  
+  pub_annotated_img_ = this->create_publisher<sensor_msgs::msg::Image>("annotated_image", 1);
   
   declare_parameter("laser.num_vertical_scans", rclcpp::ParameterValue(0));
   this->get_parameter("laser.num_vertical_scans", _vertical_scans);
@@ -136,12 +138,18 @@ ImageProjection::ImageProjection(std::string name, Channel<ProjectionOut>& outpu
   declare_parameter("imageProjection.time_step_between_depth_image", rclcpp::ParameterValue(0.5));
   this->get_parameter("imageProjection.time_step_between_depth_image", time_step_between_depth_image_);
   RCLCPP_INFO(this->get_logger(), "imageProjection.time_step_between_depth_image: %.2f", time_step_between_depth_image_);
-  
+
   declare_parameter("imageProjection.stitcher_num", rclcpp::ParameterValue(0));
   this->get_parameter("imageProjection.stitcher_num", stitcher_num_);
   RCLCPP_INFO(this->get_logger(), "imageProjection.stitcher_num: %d", stitcher_num_);
-
   
+  this->declare_parameter("imageProjection.trt_model_path", rclcpp::ParameterValue(""));
+  this->get_parameter("imageProjection.trt_model_path", trt_model_path_);
+  RCLCPP_INFO(this->get_logger(), "imageProjection.trt_model_path: %s" , trt_model_path_.c_str());
+
+  YoloV8Config config;
+  yolov8_ = std::make_shared<YoloV8>("", trt_model_path_, config);
+
   const size_t cloud_size = _vertical_scans * _horizontal_scans;
 
   _laser_cloud_in.reset(new pcl::PointCloud<PointType>());
@@ -162,7 +170,7 @@ ImageProjection::ImageProjection(std::string name, Channel<ProjectionOut>& outpu
 }
 
 
-void ImageProjection::resetParameters() {
+void YoloImageProjection::resetParameters() {
   const size_t cloud_size = _vertical_scans * _horizontal_scans;
   PointType nanPoint;
   nanPoint.x = std::numeric_limits<float>::quiet_NaN();
@@ -197,7 +205,7 @@ void ImageProjection::resetParameters() {
   _seg_msg.segmented_cloud_range.assign(cloud_size, 0);
 }
 
-void ImageProjection::tfInitial(){
+void YoloImageProjection::tfInitial(){
 
   //@Initialize transform listener and broadcaster
   tf_listener_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
@@ -210,7 +218,7 @@ void ImageProjection::tfInitial(){
   tfl_ = std::make_shared<tf2_ros::TransformListener>(*tf2Buffer_);
 }
 
-bool ImageProjection::allEssentialTFReady(std::string sensor_frame){
+bool YoloImageProjection::allEssentialTFReady(std::string sensor_frame){
   
   if(!got_baselink2sensor_tf_){
     sensor_frame_ = sensor_frame;
@@ -290,7 +298,7 @@ bool ImageProjection::allEssentialTFReady(std::string sensor_frame){
   }
 }
 
-void ImageProjection::cloudHandler(
+void YoloImageProjection::cloudHandler(
     const sensor_msgs::msg::PointCloud2::SharedPtr laserCloudMsg){
 
   if(!allEssentialTFReady(laserCloudMsg->header.frame_id))
@@ -298,6 +306,7 @@ void ImageProjection::cloudHandler(
 
   resetParameters();
 
+  // Copy and remove NAN points
   pcl::fromROSMsg(*laserCloudMsg, *_laser_cloud_in);
   std::vector<int> indices;
   pcl::removeNaNFromPointCloud(*_laser_cloud_in, *_laser_cloud_in, indices);
@@ -347,7 +356,7 @@ void ImageProjection::cloudHandler(
 }
 
 
-void ImageProjection::projectPointCloud() {
+void YoloImageProjection::projectPointCloud() {
   
   //cv image
   cv::Mat projected_image(_vertical_scans, _horizontal_scans, CV_8UC1, cv::Scalar(0));
@@ -420,6 +429,21 @@ void ImageProjection::projectPointCloud() {
   sensor_msgs::msg::Image::SharedPtr msg = img_bridge.toImageMsg();
   _pub_projected_image->publish(*msg);
 
+
+  cv::Mat colorImage;
+  cv::cvtColor(projected_image, colorImage, cv::COLOR_GRAY2BGR);
+  // Run inference
+  const auto objects = yolov8_->detectObjects(colorImage);
+
+  // Draw the bounding boxes on the image
+  yolov8_->drawObjectLabels(colorImage, objects);
+
+  cv_bridge::CvImage img_annotated;
+  img_annotated.image = colorImage;
+  img_annotated.encoding = sensor_msgs::image_encodings::TYPE_8UC3;
+  sensor_msgs::msg::Image::SharedPtr ros2_annotated_img = img_annotated.toImageMsg();
+  pub_annotated_img_->publish(*ros2_annotated_img);
+
   //@ write depth img
   double imge_time = _seg_msg.header.stamp.sec + _seg_msg.header.stamp.nanosec/1e9;
 
@@ -449,7 +473,7 @@ void ImageProjection::projectPointCloud() {
 
 }
 
-void ImageProjection::findStartEndAngle() {
+void YoloImageProjection::findStartEndAngle() {
   // start and end orientation of this cloud
   auto point = _laser_cloud_in->points.front();
   _seg_msg.start_orientation = -std::atan2(point.y, point.x);
@@ -466,7 +490,7 @@ void ImageProjection::findStartEndAngle() {
       _seg_msg.end_orientation - _seg_msg.start_orientation;
 }
 
-void ImageProjection::groundRemoval() {
+void YoloImageProjection::groundRemoval() {
   // _ground_mat
   // -1, no valid info to check if ground of not
   //  0, initial value, after validation, means not ground
@@ -594,7 +618,7 @@ void ImageProjection::groundRemoval() {
   }
 }
 
-void ImageProjection::cloudSegmentation() {
+void YoloImageProjection::cloudSegmentation() {
   // segmentation process
   for (size_t i = 0; i < _vertical_scans; ++i)
     for (size_t j = 0; j < _horizontal_scans; ++j)
@@ -653,7 +677,7 @@ void ImageProjection::cloudSegmentation() {
   }
 }
 
-void ImageProjection::labelComponents(int row, int col) {
+void YoloImageProjection::labelComponents(int row, int col) {
 
   const float segmentThetaThreshold = tan(_segment_theta);
 
@@ -739,7 +763,7 @@ void ImageProjection::labelComponents(int row, int col) {
   }
 }
 
-void ImageProjection::publishClouds() {
+void YoloImageProjection::publishClouds() {
   const auto& cloudHeader = _seg_msg.header;
 
   sensor_msgs::msg::PointCloud2 laserCloudTemp;
