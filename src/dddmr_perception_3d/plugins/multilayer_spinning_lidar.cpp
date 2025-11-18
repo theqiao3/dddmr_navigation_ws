@@ -564,7 +564,7 @@ void MultiLayerSpinningLidar::selfClear(){
               pt_i.y = (*a_pt).y;
               pt_i.z = (*a_pt).z;
               double search_distance =  (*a_pt).intensity/20. + 0.01; //@ decrease spot size, ex: at 1.0 meter look for 5 cm;
-              search_distance = std::min(search_distance, 0.1);
+              search_distance = std::min(search_distance, 0.05);
               std::vector<int> id;
               std::vector<float> sqdist;
               if(kdtree_last_observation->radiusSearch(pt_i, search_distance, id, sqdist)>0){
@@ -630,6 +630,11 @@ void MultiLayerSpinningLidar::selfClear(){
 void MultiLayerSpinningLidar::getCastingPointCloud(pcl::PointXYZ& cluster_center, pcl::PointCloud<pcl::PointXYZI>& pc_for_check){
 
   //@We leverage intensity as distance from cluster_center to check point
+  pcl::PointXYZI a_pt_s;
+  a_pt_s.x = trans_gbl2s_af3_.translation().x();
+  a_pt_s.y = trans_gbl2s_af3_.translation().y();
+  a_pt_s.z = trans_gbl2s_af3_.translation().z();
+
   float dX =
       trans_gbl2s_af3_.translation().x() - cluster_center.x;
   float dY =
@@ -638,7 +643,7 @@ void MultiLayerSpinningLidar::getCastingPointCloud(pcl::PointXYZ& cluster_center
       trans_gbl2s_af3_.translation().z() - cluster_center.z;
   
   float distance = sqrt(dX*dX + dY*dY + dZ*dZ);
-  //@ Distance is the distance from cluster_center to line point sample
+  //@ Distance is the distance from point sample to sensor
   distance = distance/0.05; //sample by every 5 cm
   float dt = 1/distance;
   for(float t=0; t<=1.0; t+=dt){
@@ -647,8 +652,7 @@ void MultiLayerSpinningLidar::getCastingPointCloud(pcl::PointXYZ& cluster_center
     a_pt.x = cluster_center.x + dX*t;
     a_pt.y = cluster_center.y + dY*t;
     a_pt.z = cluster_center.z + dZ*t;
-    //@when t=0, a_pt should be the same as cluster_center
-    a_pt.intensity = getDistanceBTWPoints(cluster_center, a_pt);  
+    a_pt.intensity = getDistanceBTWPoints(a_pt_s, a_pt);  
     pc_for_check.push_back(a_pt); 
   }
   
