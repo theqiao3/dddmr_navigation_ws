@@ -30,7 +30,6 @@ RUN apt-get update && apt-get install -y git
 RUN apt install -y ros-humble-desktop
 # --- Humble has been installed
 
-
 #install some tool
 RUN apt install -y nano openssh-server usbutils
 #for ping hardware etc...
@@ -86,7 +85,6 @@ RUN apt install -y libasio-dev can-utils
 #gst
 RUN apt install -y libgstreamer1.0-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-x gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 gstreamer1.0-qt5 gstreamer1.0-pulseaudio
 
-#install torch 2.5 and torchvision 0.20 and cudnn 9
 #see: https://forums.developer.nvidia.com/t/pytorch-and-torvision-version-issue-runtimeerror-operator-torchvision-nms-does-not-exist/312446
 #see: https://developer.nvidia.com/cudnn-downloads?target_os=Linux&target_arch=aarch64-jetson&Compilation=Native&Distribution=Ubuntu&target_version=22.04&target_type=deb_local
 RUN apt-get install -y python3-pip libopenblas-dev
@@ -114,9 +112,6 @@ RUN /bin/bash -c  "cd /tmp && apt-get install -y cudss"
 
 #----->torch 2.8 so that it support vllm 0.10 and torch vision
 RUN /bin/bash -c "pip install --ignore-installed sympy==1.14.0"
-#RUN /bin/bash -c "cd /tmp && wget https://pypi.jetson-ai-lab.io/jp6/cu126/+f/590/92ab729aee2b8/torch-2.8.0-cp310-cp310-linux_aarch64.whl torch-2.8.0-cp310-cp310-linux_aarch64.whl \
-#                     && python3 -m pip install --upgrade pip; python3 -m pip install --no-cache torch-2.8.0-cp310-cp310-linux_aarch64.whl"
-#RUN /bin/bash -c "cd /tmp && git clone https://github.com/pytorch/vision.git && cd vision && git checkout v0.23.0 && python3 setup.py install"
 #see: https://forums.developer.nvidia.com/t/help-me-with-correct-pytorch-and-torchvision-versions-requirement-for-jetpack-6-2-1-orin-super/343688/37
 RUN /bin/bash -c "pip3 install --force-reinstall torch --index-url https://pypi.jetson-ai-lab.io/jp6/cu126"
 RUN /bin/bash -c "pip3 install --force-reinstall torchaudio --index-url https://pypi.jetson-ai-lab.io/jp6/cu126"
