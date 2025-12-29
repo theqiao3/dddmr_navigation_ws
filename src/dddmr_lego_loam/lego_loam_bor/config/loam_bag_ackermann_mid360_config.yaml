@@ -1,0 +1,85 @@
+bag_reader:
+  ros__parameters:
+    use_sim_time: true
+    bag_file_dir: "/root/dddmr_bags/ackermann_robot_map"   # 修改为你的bag文件目录
+    point_cloud_topic: "/livox/lidar"                      # MID360点云话题
+    odometry_topic: "/odom"                                # 轮编码器里程计话题
+    skip_frame: 2                                           # 跳帧数 (1=处理所有帧, 2=处理每2帧)
+
+lego_loam_ip:
+  ros__parameters:
+    use_sim_time: true
+    
+    laser:
+        odom_type: "wheel_odometry"         # 轮式阿克曼使用轮编码器里程计
+        baselink_frame: "base_footprint"
+        num_vertical_scans: 32              # MID360: 32条扫描线
+        num_horizontal_scans: 1000          # 水平分辨率
+        ground_scan_index: 16               # 地面扫描线索引 (从0开始)
+        vertical_angle_bottom: -7.0         # MID360: 垂直视角下界 (度)
+        vertical_angle_top: 52.0            # MID360: 垂直视角上界 (度)
+        scan_period: 0.1                    # 扫描周期 (秒，对应10Hz)
+
+    imageProjection:
+        segment_valid_point_num: 5          # 有效点数阈值
+        segment_valid_line_num: 2           # 有效线数阈值
+        segment_theta: 60.0                 # 分割角度阈值 (度)
+        minimum_detection_range: 0.5        # 最小检测距离 (m)
+        maximum_detection_range: 100.0      # 最大检测距离 (m)
+        distance_for_patch_between_rings: 1.0  # 相邻扫描线点的配对距离 (m)
+        stitcher_num: 3                     # 扫描线拼接参数
+
+lego_loam_fa:
+  ros__parameters:
+    use_sim_time: true
+    
+    featureAssociation:
+        edge_threshold: 0.1                 # 边界特征阈值
+        surf_threshold: 0.1                 # 平面特征阈值
+        nearest_feature_search_distance: 3.0  # 特征搜索距离 (m)
+
+    mapping:
+        to_map_optimization: true           # 是否进行地图优化
+
+lego_loam_mo:
+  ros__parameters:
+    use_sim_time: true
+    
+    mapping:
+        distance_between_key_frame: 1.0     # 关键帧间距离 (m)
+        angle_between_key_frame: 1.0        # 关键帧间角度 (度)
+
+        enable_loop_closure: true           # 启用回环检测
+
+        surrounding_keyframe_search_num: 20    # 邻域关键帧搜索数
+        history_keyframe_search_radius: 12.0   # 历史关键帧搜索半径 (m)
+        history_keyframe_search_num: 5         # 历史关键帧搜索数
+        history_keyframe_fitness_score: 0.5    # 历史关键帧适应度得分阈值
+        
+        ground_voxel_size: 0.3              # 地面体素大小 (m)
+        ground_edge_threshold_num: 50       # 边界检测阈值
+
+# ============================================
+# 参数调整建议
+# ============================================
+# 如果建图效果不好，可尝试以下调整：
+#
+# 1. 建图偏移/漂移
+#    - 增大 distance_between_key_frame (增加关键帧数)
+#    - 减小 segment_theta (提高分割精度)
+#    - 检查轮编码器里程计精度
+#
+# 2. 回环失败
+#    - 减小 history_keyframe_fitness_score (放宽匹配条件)
+#    - 增大 surrounding_keyframe_search_num (更多候选)
+#    - 增大 history_keyframe_search_radius (更大搜索范围)
+#
+# 3. 特征不足 (开阔区域)
+#    - 增加轮编码器权重，修改 odom_type 或使用融合里程计
+#    - 增加点云处理精度参数
+#
+# 4. 处理速度太慢
+#    - 增大 skip_frame (跳过更多帧)
+#    - 增大 ground_voxel_size (降低分辨率)
+#    - 减小 maximum_detection_range (缩小处理范围)
+

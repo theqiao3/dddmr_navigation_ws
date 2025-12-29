@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 
+cmake_policy(SET CMP0074 NEW)
+
 project(mapping_panel LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC ON)

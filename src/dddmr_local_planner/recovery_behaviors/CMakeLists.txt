@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(recovery_behaviors)
 
+cmake_policy(SET CMP0074 NEW)
+
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)

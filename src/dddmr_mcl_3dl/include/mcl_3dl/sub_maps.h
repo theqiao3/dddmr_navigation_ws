@@ -79,6 +79,9 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_sub_map_warmup_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_sub_ground_warmup_;
 
+  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_map_cloud_;
+  void cbMapCloud(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
+
   geometry_msgs::msg::PoseWithCovarianceStamped robot_pose_;
   geometry_msgs::msg::PoseWithCovarianceStamped warm_up_pose_;
   geometry_msgs::msg::PoseWithCovarianceStamped current_sub_map_pose_;

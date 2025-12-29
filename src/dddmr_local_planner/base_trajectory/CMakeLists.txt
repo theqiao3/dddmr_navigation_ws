@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(base_trajectory)
 
+cmake_policy(SET CMP0074 NEW)
+
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
 

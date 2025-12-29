@@ -202,6 +202,10 @@ void FeatureAssociation::odomHandler(const nav_msgs::msg::Odometry::SharedPtr od
   
   odom_topic_alive_ = true;
 
+  if (baselink_frame_.empty()) {
+    return;
+  }
+
   if(!odom_tf_alive_ && odom_tf_detect_number_<2){
     try
     {
@@ -265,7 +269,8 @@ void FeatureAssociation::odomHandler(const nav_msgs::msg::Odometry::SharedPtr od
   m.getRPY(roll, pitch, yaw);
   double odom_time = static_cast<double>(odomIn->header.stamp.sec) + static_cast<double>(odomIn->header.stamp.nanosec) * 1e-9;
   double cloud_time = static_cast<double>(segInfo.header.stamp.sec) + static_cast<double>(segInfo.header.stamp.nanosec) * 1e-9;
-  if(fabs(odom_time-cloud_time)<0.05 || fabs(odom_time)<=0.1 || fabs(cloud_time)<=0.1){ //@ try to handle 0 timestamp
+  // Relaxed time check to avoid dropping odom messages due to synchronization issues or processing delays
+  if(fabs(odom_time-cloud_time)<10.0 || fabs(odom_time)<=0.1 || fabs(cloud_time)<=0.1){ //@ try to handle 0 timestamp
     transformWheelOdometrySum[0] = pitch;
     transformWheelOdometrySum[1] = yaw;
     transformWheelOdometrySum[2] = roll;
@@ -306,7 +311,12 @@ void FeatureAssociation::adjustDistortion() {
         ori -= 2 * M_PI;
     }
 
-    float relTime = (ori - segInfo.start_orientation) / segInfo.orientation_diff;
+    float relTime;
+    if (fabs(segInfo.orientation_diff) < 1e-6) {
+      relTime = 0.0;
+    } else {
+      relTime = (ori - segInfo.start_orientation) / segInfo.orientation_diff;
+    }
     point.intensity =
         int(segmentedCloud->points[i].intensity) + _scan_period * relTime;
 
@@ -703,9 +713,15 @@ void FeatureAssociation::findCorrespondingCornerFeatures(int iterCount) {
       float m33 = ((y0 - y1) * (z0 - z2) - (y0 - y2) * (z0 - z1));
 
       float a012 = sqrt(m11 * m11 + m22 * m22 + m33 * m33);
+      if (a012 < 1e-6) {
+        continue;
+      }
 
       float l12 = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) +
                        (z1 - z2) * (z1 - z2));
+      if (l12 < 1e-6) {
+        continue;
+      }
 
       float la = ((y1 - y2) * m11 + (z1 - z2) * m22) / a012 / l12;
 
@@ -826,6 +842,9 @@ void FeatureAssociation::findCorrespondingSurfFeatures(int iterCount) {
       float pd = -(pa * tripod1.x + pb * tripod1.y + pc * tripod1.z);
 
       float ps = sqrt(pa * pa + pb * pb + pc * pc);
+      if (ps < 1e-6) {
+        continue;
+      }
 
       pa /= ps;
       pb /= ps;

@@ -13,6 +13,10 @@
       <description>TBW</description>
     </class>
 
+    <class type="trajectory_generators::AckermannSimpleTrajectoryGeneratorTheory"  base_class_type="trajectory_generators::TrajectoryGeneratorTheory">
+      <description>Ackermann Steering Simple Trajectory Generator for wheeled robots with Ackermann kinematics</description>
+    </class>
+
   </library>
 </class_libraries>
 

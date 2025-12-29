@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(trajectory_generators)
 
+cmake_policy(SET CMP0074 NEW)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -97,6 +99,7 @@ add_library(theories SHARED
   theories/dd_rotate_inplace_theory.cpp
   theories/dd_simple_trajectory_generator_theory.cpp
   theories/omni_simple_trajectory_generator_theory.cpp
+  theories/ackermann_simple_trajectory_generator_theory.cpp
 )
 target_link_libraries(theories
   trajectory_generator_ros

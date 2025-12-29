@@ -177,6 +177,8 @@ void MultiLayerSpinningLidar::onInitialize()
 void MultiLayerSpinningLidar::cbSensor(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
 {
 
+  RCLCPP_INFO_THROTTLE(node_->get_logger().get_child(name_), *clock_, 5000, "Received PointCloud with timestamp: %u.%u", msg->header.stamp.sec, msg->header.stamp.nanosec);
+
   //@if not stitch, save copy time
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_msg (new pcl::PointCloud<pcl::PointXYZ>);
   if(stitcher_num_<=0){
@@ -797,7 +799,7 @@ bool MultiLayerSpinningLidar::isinLidarObservation(pcl::PointXYZ& pc){
   tf2::Matrix3x3 m(tf2_sensor2sensor_pointing_clustercentroid.getRotation());
   double roll, pitch, yaw;
   m.getRPY(roll, pitch, yaw);
-  //Although the test shows that yaw is already the shortest, we will use shortest_angular_distance anyway.
+  //Although the test shows that yaw is already the shortest, we will use shortest_angular_distance anyway;
   yaw = angles::shortest_angular_distance(0.0, yaw);
   yaw = yaw * 180.0 / 3.1415926535;// change to degree
   if(yaw>=0 && (yaw<scan_effective_positive_start_ || yaw>scan_effective_positive_end_))

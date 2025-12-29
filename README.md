@@ -1,67 +1,48 @@
 # 🤖 dddmr_navigation
+# 🤖 dddmr_navigation
 
-## 🚀 Big update!
-We’ve just integrated a Gazebo models using Unitree-go2 with the DDDMR Navigation Stack, unlocking true 3D navigation for simulation and testing. Using the latest quadruped robots go2 combined with our advanced stack, you can explore navigation capabilities that go far beyond traditional 2D navigation frameworks.
+## 🚀 Latest Update: MID360 LiDAR Support
+**Great news!** We have adapted the DDDMR Navigation Stack to support the MID360 360° LiDAR sensor (MID 360). This includes configuration files, launch samples, and tested workflows for mapping, localization and planning on Ackermann-type robots using MID360 pointclouds. See the detailed Ackermann guide for step-by-step instructions and parameter examples: `ACKERMANN_FULL_DEBUG_GUIDE.md`.
 
-👉 Jump in, simulate, and experience features that Nav2 alone can’t achieve — multi-level mapping, ramp navigation, and obstacle handling in complex environments. 
+👉 Try the ACKERMANN setup or check the MID360-specific configs in `src/dddmr_lego_loam` and `src/dddmr_mcl_3dl`.
 
-[👾 Let's play go2 using dddmr navigation](https://github.com/dfl-rlab/dddmr_navigation/tree/main/src/dddmr_beginner_guide)
+---
+
+## 🚀 Highlights & New Demos
+We continue to support a wide range of mobile platforms (including Ackermann steering vehicles and quadrupeds) and sensors. Recent additions include:
+
+- MID360 (360° LiDAR) mapping & localization configs
+- Ackermann-specific planning and control examples
+- Demo images and sample outputs (embedded below)
 
 <p align='center'>
-    <img src="https://github.com/dfl-rlab/dddmr_documentation_materials/blob/main/dddmr_beginner_guide/3d_nav_gz.gif" width="700" height="420"/>
+  <img src="image/map.png" alt="map demo" width="640" />
+</p>
+
+<p align='center'>
+  <img src="image/ground.png" alt="ground segmentation demo" width="320" style="margin-right:12px;" />
+  <img src="image/pcd and pose.png" alt="pcd and pose demo" width="320" />
 </p>
 
 ---
 
-## 🚀 We have released robosense airy example
-<table align='center'>
-  <tr width="100%">
-    <td width="40%"><img src="https://github.com/dfl-rlab/dddmr_documentation_materials/blob/main/dddmr_lego_loam_bor/airy_configuration.png" width="400" height="260"/><p align='center'>Airy as the belly button!?</p></td>
-    <td width="40%"><img src="https://github.com/dfl-rlab/dddmr_documentation_materials/blob/main/dddmr_lego_loam_bor/robosense_airy_dddmr_lego_loam.gif" width="400" height="260"/><p align='center'>DDDMR SLAM</p></td>
-  </tr>
-</table>
+> **Note:** DDDMR Navigation Stack is designed to extend what 2D stacks (e.g., Nav2) can do — multi-level mapping, ramp navigation, 3D perception-based planning and semantic clearings.
 
-[👾 Let's play airy using dddmr navigation](https://github.com/dfl-rlab/dddmr_navigation/tree/main/src/dddmr_lego_loam)
+## ✅ Why choose DDDMR (3D Navigation)?
 
-
----
-
-> [!NOTE]
-> DDDMR Navigation Stack is designed to solve the issues that [Nav2](https://github.com/ros-navigation/navigation2) not able to handle: such as multi-layer floor mapping and localization, path planning in stereo structures and percption markings and clearings in a 3D point cloud map.
-
-<table align='center'>
-  <tr width="100%">
-    <td width="40%"><img src="https://github.com/dfl-rlab/dddmr_documentation_materials/blob/main/dddmr_navigation/multilevel_map.gif" width="400" height="260"/><p align='center'>Multilevel map</p></td>
-    <td width="40%"><img src="https://github.com/dfl-rlab/dddmr_documentation_materials/blob/main/dddmr_navigation/obstacle_avoidance.gif" width="400" height="260"/><p align='center'>Obstacle avoidance on ramps</p></td>
-  </tr>
-  <tr width="100%">
-    <td width="40%"><img src="https://github.com/dfl-rlab/dddmr_documentation_materials/blob/main/dddmr_navigation/mapping_navigating.gif" width="400" height="260"/><p align='center'>Navigating while mapping</p></td>
-    <td width="40%"><img src="https://github.com/dfl-rlab/dddmr_documentation_materials/blob/main/dddmr_semantic_segmentation/dddmr_semantic_segmentation_to_pointcloud.gif" width="400" height="260"/><p align='center'>Semantic segmentation and navigation (stay tuned🔥)</p></td>
-  </tr>
-</table>
-
-DDDMR navigation (3D Mobile Robot Navigation) is a navigation stack allows users to map, localize and autonomously navigate in 3D environments. 
-
-Below figure shows the comparison between 2D navigation stack and DDD(3D) navigation.
-Our stack is a total solution for a mobile platform to navigate in 3D environments. There are plenty advantages for choosing DDD navigation:
-  
-✨ The standard procedures of DDD mobile robots and 2D mobile robots are the same, make it easier for 2D navigation stack users to transit to DDD navigation without difficulties:
-  1. Mapping and refining the map using our packages and tools.
-  2. Turn off mapping, use MCL to localize the robot by providing an initial pose.
-  3. Send a goal to the robot, the robot will calculate the global plan and avoid obstacles using local planner.
-
-✨ DDD navigation is no longer suffered from terrain situations. For example, ramps in factories or wheelchair accessible.
-
-✨ DDD navigation has been well tested is many fields and is based on the cost-effective hardware, for example, 16 lines lidar, intel NUC/Jetson Orin Nano and consumer-grade imu. We are trying to make the solution as affordable as possible.
+- Familiar workflow for 2D navigation users: map → localize → plan & navigate
+- Handles complex terrains (ramps, multi-floor environments)
+- Works on cost-effective hardware (e.g., MID360, 16-line lidar, NUC/Jetson)
 
 <p align='center'>
     <img src="https://github.com/dfl-rlab/dddmr_documentation_materials/blob/main/dddmr_navigation/navigation_diagram.png" width="780" height="560"/>
 </p>
 
-🤝 We would like to thank the contributors and users of [Navigation](https://github.com/ros-planning/navigation) and [Navigation2](https://github.com/ros-navigation/navigation2), ddd navigation stands on your shoulder!
+🤝 We thank contributors and projects like [Navigation](https://github.com/ros-planning/navigation) and [Navigation2](https://github.com/ros-navigation/navigation2).
 
-😵‍💫😵‍💫😵‍💫😵‍💫😵‍💫😵‍💫😵‍💫😵‍💫😵‍💫😵‍💫 I have a robot, but where to start?[Click me to see the beginner's guide](https://github.com/dfl-rlab/dddmr_navigation/blob/main/src/dddmr_beginner_guide/README.md)😵‍💫😵‍💫😵‍💫😵‍💫😵‍💫😵‍💫😵‍💫😵‍💫😵‍💫😵‍💫
-## 🏁 Detail documentations for each package
+If you're getting started, check the beginner's guide: [dddmr_beginner_guide](https://github.com/dfl-rlab/dddmr_navigation/tree/main/src/dddmr_beginner_guide)
+
+## 🏁 Detailed documentation for each package
 <details><summary> <b>💡 Click me to see Mapping</b> </summary>
 https://github.com/dfl-rlab/dddmr_navigation/tree/main/src/dddmr_lego_loam
 </details>

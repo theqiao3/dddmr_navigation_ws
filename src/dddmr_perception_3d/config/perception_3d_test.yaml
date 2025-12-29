@@ -1,0 +1,45 @@
+perception_3d_test:
+  ros__parameters:
+    global_frame: "map"
+    robot_base_frame: "base_link"
+    max_obstacle_distance: 9999.0
+    inscribed_radius: 0.5
+    inflation_descending_rate: 2.0
+    inflation_radius: 1.5
+    sensors_collected_frequency: 10.0
+    dgraph_publish_frequency: 1.0
+    plugins: ["map", "lidar"]
+    
+    map:
+      plugin: "perception_3d::StaticLayer"
+      use_adaptive_connection: true
+      adaptive_connection_number: 20
+      radius_of_ground_connection: 1.5
+      intensity_search_radius: 1.0
+      intensity_search_punish_weight: 0.1
+      static_imposing_radius: 1.5
+      map_topic: "mapcloud"
+      ground_topic: "mapground"
+      support:
+        mapping_mode: false
+        enable_edge_detection: true
+        generate_static_graph: true
+
+    lidar:
+      plugin: "perception_3d::MultiLayerSpinningLidar"
+      topic: "/livox/lidar/pointcloud"
+      pub_gbl_marking_for_visualization: true
+      vertical_FOV_top: 52.0
+      vertical_FOV_bottom: -7.0
+      scan_effective_positive_start: 30.0
+      scan_effective_positive_end: 180.0
+      scan_effective_negative_start: -30.0
+      scan_effective_negative_end: -180.0
+      euclidean_cluster_extraction_tolerance: 0.1
+      euclidean_cluster_extraction_min_cluster_size: 1
+      xy_resolution: 0.05
+      height_resolution: 0.05
+      marking_height: 2.0
+      perception_window_size: 5.0
+      segmentation_ignore_ratio: 1.1
+      expected_sensor_time: 0.1

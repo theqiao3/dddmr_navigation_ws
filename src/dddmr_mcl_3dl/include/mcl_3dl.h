@@ -150,6 +150,7 @@ class MCL3dlNode : public rclcpp::Node
 
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_odom_;
     rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr sub_position_;
+    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_cloud_;
 
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_ground_normal_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_pc_ec_;
@@ -158,6 +159,7 @@ class MCL3dlNode : public rclcpp::Node
 
     void cbOdom(const nav_msgs::msg::Odometry::SharedPtr msg);
     bool getBaselink2SensorAF3(std_msgs::msg::Header sensor_header, Eigen::Affine3d& trans_b2s_af3);
+    void cbCloud(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
 
     void cbLeGoFeatureCloud(const sensor_msgs::msg::PointCloud2::SharedPtr pc_sharpMsg,
                     const sensor_msgs::msg::PointCloud2::SharedPtr pc_less_sharpMsg,

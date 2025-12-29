@@ -1,0 +1,81 @@
+bag_reader:
+  ros__parameters:
+    use_sim_time: true
+    bag_file_dir: "/home/tianbot/rosbag2_2025_12_19-13_56_10"
+    point_cloud_topic: "/livox/lidar/pointcloud"
+    odometry_topic: "/odometry/filtered"
+    skip_frame: 1
+lego_loam_ip:
+  ros__parameters:
+    use_sim_time: true
+    # MID360激光雷达 + 轮式阿克曼机器人 在线建图配置
+    laser:
+        # 调试建议：先使用 laser_odometry 确保建图算法能跑通，再切换回 wheel_odometry 融合轮速计
+        odom_type: "wheel_odometry"         # 选项: "wheel_odometry" / "laser_odometry"
+        baselink_frame: "base_link"
+        num_vertical_scans: 32             # MID360: 32条扫描线
+        num_horizontal_scans: 640           # 水平分辨率
+        ground_scan_index: 4               # 地面扫描线索引
+        vertical_angle_bottom: -7.0         # MID360: 垂直视角下界 (度)
+        vertical_angle_top: 52.0           # MID360: 垂直视角上界 (度)
+        scan_period: 0.1                    # 扫描周期 (秒，对应10Hz)
+
+    imageProjection:
+        segment_valid_point_num: 5
+        segment_valid_line_num: 2
+        segment_theta: 60.0
+        minimum_detection_range: 0.5
+        maximum_detection_range: 100.0
+        distance_for_patch_between_rings: 1.0
+        stitcher_num: 1
+
+lego_loam_fa:
+  ros__parameters:
+    use_sim_time: true
+    featureAssociation:
+        edge_threshold: 0.3
+        surf_threshold: 0.3
+        nearest_feature_search_distance: 3.0
+    
+    mapping:
+        to_map_optimization: true
+
+lego_loam_mo:
+  ros__parameters:
+    use_sim_time: true
+    mapping:
+        distance_between_key_frame: 0.3
+        angle_between_key_frame: 0.2
+        
+        enable_loop_closure: true
+        
+        surrounding_keyframe_search_num: 50
+        history_keyframe_search_radius: 15.0
+        history_keyframe_search_num: 25
+        history_keyframe_fitness_score: 1.5
+        
+        ground_voxel_size: 0.4
+        ground_edge_threshold_num: 50
+
+# ============================================
+# 在线建图说明
+# ============================================
+# 使用此配置进行实时建图：
+# ros2 launch lego_loam_bor lego_loam.launch
+#
+# 关键点：
+# 1. 确保以下ROS2话题可用：
+#    - /odom (nav_msgs/Odometry)
+#    - /lidar_point_cloud (或 /livox/lidar)
+#    - /tf (TransformBroadcaster)
+#
+# 2. TF树要求：
+#    map -> odom -> base_link -> lidar_link
+#
+# 3. 手动驾驶机器人进行建图
+#
+# 4. 在RViz2中可实时查看建图进度
+#
+# 5. 建图完成后，结果保存在：
+#    install/lego_loam_bor/share/lego_loam_bor/pcd/
+#

@@ -28,9 +28,11 @@
  */
 
 #include <mcl_3dl/sub_maps.h>
+#include <pcl/features/normal_3d.h>
+
 namespace mcl_3dl
 {
-SubMaps::SubMaps(std::string name) : Node(name), is_current_ready_(false), 
+SubMaps::SubMaps(std::string name) : Node(name), is_current_ready_(false),
   prepare_warm_up_(false), is_warm_up_ready_(false), is_initial_(false){
   
   clock_ = this->get_clock();
@@ -73,9 +75,22 @@ SubMaps::SubMaps(std::string name) : Node(name), is_current_ready_(false),
   pub_ground_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("mapground",
                 rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());  
 
+  sub_map_cloud_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+      "mapcloud", rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable(),
+      std::bind(&SubMaps::cbMapCloud, this, std::placeholders::_1));
+
   timer_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
-  readPoseGraph();
+  // Initialize kdtree_poses_ to avoid segfault if readPoseGraph fails or is skipped
+  kdtree_poses_.reset(new pcl::KdTreeFLANN<pcl_t>());
+  pcl::PointCloud<pcl_t>::Ptr empty_cloud(new pcl::PointCloud<pcl_t>());
+  kdtree_poses_->setInputCloud(empty_cloud);
+  
+  try {
+    readPoseGraph();
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to read pose graph: %s", e.what());
+  }
 
   warm_up_timer_ = this->create_wall_timer(200ms, std::bind(&SubMaps::warmUpThread, this), timer_group_);
 }
@@ -91,6 +106,11 @@ void SubMaps::readPoseGraph(){
   */
 
   pcd_poses_.reset(new pcl::PointCloud<PointTypePose>());
+  if (pose_graph_dir_.empty()) {
+    RCLCPP_WARN(this->get_logger(), "pose_graph_dir is empty, skipping pose graph load.");
+    return;
+  }
+
   if (pcl::io::loadPCDFile<PointTypePose> (pose_graph_dir_ + "/poses.pcd", *pcd_poses_) == -1) //* load the file
   {
     RCLCPP_ERROR(this->get_logger(), "Read poses PCD file fail: %s", pose_graph_dir_.c_str());
@@ -318,6 +338,11 @@ bool SubMaps::isWarmUpReady(){
 
 void SubMaps::swapKdTree(){
   
+  if (pose_graph_dir_.empty()) {
+    is_warm_up_ready_ = false;
+    return;
+  }
+
   map_current_.reset(new pcl::PointCloud<pcl_t>());
   ground_current_.reset(new pcl::PointCloud<pcl_t>());  
   map_current_ = map_warmup_;
@@ -343,6 +368,13 @@ void SubMaps::swapKdTree(){
 
 void SubMaps::setInitialPose(const geometry_msgs::msg::PoseWithCovarianceStamped pose){
   RCLCPP_INFO(this->get_logger(), "Receive initial pose at: %.2f, %.2f, %.2f", pose.pose.pose.position.x, pose.pose.pose.position.y, pose.pose.pose.position.z);
+  
+  if (pose_graph_dir_.empty()) {
+    RCLCPP_INFO(this->get_logger(), "Single map mode (no pose graph), skipping warmup.");
+    is_warm_up_ready_ = true;
+    return;
+  }
+
   prepare_warm_up_ = true;
   warm_up_pose_ = pose;
 }
@@ -356,6 +388,36 @@ void SubMaps::setPose(const geometry_msgs::msg::PoseWithCovarianceStamped pose){
     prepare_warm_up_ = true;
     warm_up_pose_ = pose;
     RCLCPP_INFO_THROTTLE(this->get_logger(), *clock_, 1000, "Warming up sub maps");
+  }
+}
+
+void SubMaps::cbMapCloud(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
+{
+  std::unique_lock<sub_maps_mutex_t> lock(*access_);
+  
+  pcl::PointCloud<pcl_t>::Ptr map_cloud(new pcl::PointCloud<pcl_t>);
+  pcl::fromROSMsg(*msg, *map_cloud);
+  
+  RCLCPP_INFO(this->get_logger(), "Received global map with %lu points", map_cloud->points.size());
+
+  kdtree_map_current_.setInputCloud(map_cloud);
+  
+  // Use same map for ground kdtree for now
+  kdtree_ground_current_.setInputCloud(map_cloud);
+  
+  // Compute normals
+  pcl::NormalEstimation<pcl_t, pcl::Normal> ne;
+  ne.setInputCloud(map_cloud);
+  ne.setSearchMethod(typename pcl::search::KdTree<pcl_t>::Ptr (new pcl::search::KdTree<pcl_t>));
+  ne.setKSearch(10); 
+  ne.compute(normals_ground_current_);
+  
+  is_current_ready_ = true;
+  is_initial_ = true;
+
+  if (pose_graph_dir_.empty()) {
+    map_current_ = map_cloud;
+    ground_current_ = map_cloud;
   }
 }
 

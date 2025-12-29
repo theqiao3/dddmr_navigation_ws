@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(dddmr_semantic_segmentation)
 
+cmake_policy(SET CMP0074 NEW)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -23,7 +25,7 @@ find_package(pcl_conversions REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(image_geometry REQUIRED)
 
-find_package(PCL 1.15 REQUIRED QUIET)
+find_package(PCL REQUIRED QUIET)
 find_package(OpenCV REQUIRED)
 
 set(dependencies

@@ -147,8 +147,6 @@ ImageProjection::ImageProjection(std::string name, Channel<ProjectionOut>& outpu
   this->get_parameter("imageProjection.trt_model_path", trt_model_path_);
   RCLCPP_INFO(this->get_logger(), "imageProjection.trt_model_path: %s" , trt_model_path_.c_str());
   
-  std::string filename = "my_file.txt"; // Replace with your file name
-
   if (std::filesystem::exists(trt_model_path_)) {
     is_trt_engine_exist_ = true;
   }
@@ -320,6 +318,12 @@ void ImageProjection::cloudHandler(
   pcl::fromROSMsg(*laserCloudMsg, *_laser_cloud_in);
   std::vector<int> indices;
   pcl::removeNaNFromPointCloud(*_laser_cloud_in, *_laser_cloud_in, indices);
+  
+  // Sanity check: ensure we have points in the cloud
+  if (_laser_cloud_in->points.empty()) {
+    RCLCPP_WARN(this->get_logger(), "Received empty point cloud, skipping frame");
+    return;
+  }
 
   //@if not stitch, save copy time
   pcl::PointCloud<PointType>::Ptr pcl_stitched_msg (new pcl::PointCloud<PointType>);
@@ -385,9 +389,21 @@ void ImageProjection::projectPointCloud() {
                        thisPoint.y * thisPoint.y +
                        thisPoint.z * thisPoint.z);
 
+    // Prevent division by zero and invalid range
+    if (range < 0.1 || std::isnan(range) || std::isinf(range)) {
+      continue;
+    }
+
     // find the row and column index in the image for this point
-    float verticalAngle = std::asin(thisPoint.z / range);
-        //std::atan2(thisPoint.z, sqrt(thisPoint.x * thisPoint.x + thisPoint.y * thisPoint.y));
+    float sinAngle = thisPoint.z / range;
+    if (sinAngle < -1.0) sinAngle = -1.0;
+    if (sinAngle > 1.0) sinAngle = 1.0;
+    float verticalAngle = std::asin(sinAngle);
+
+    // Prevent division by zero
+    if (fabs(_ang_resolution_Y) < 1e-6) {
+      continue;
+    }
 
     int rowIdn = (verticalAngle + _ang_bottom) / _ang_resolution_Y;
     if (rowIdn < 0 || rowIdn >= _vertical_scans) {
@@ -395,6 +411,12 @@ void ImageProjection::projectPointCloud() {
     }
 
     float horizonAngle = std::atan2(thisPoint.x, thisPoint.y) + _sensor_yaw_angle;
+
+    // Prevent division by zero in _ang_resolution_X
+    if (fabs(_ang_resolution_X) < 1e-6) {
+      RCLCPP_ERROR(this->get_logger(), "Invalid _ang_resolution_X: %.6f", _ang_resolution_X);
+      continue;
+    }
 
     //if(horizonAngle>=0.7854 && horizonAngle<=1.57+0.7854 && range<6.0){
     //  continue;
@@ -419,6 +441,16 @@ void ImageProjection::projectPointCloud() {
 
     if (range < _minimum_detection_range || range > _maximum_detection_range){
       continue;
+    }
+
+    // Check if the point is already filled with a closer point
+    if (_range_mat(rowIdn, viscolumnIdn) != FLT_MAX && range > _range_mat(rowIdn, viscolumnIdn)) {
+        continue;
+    }
+
+    // Check if the point is already filled with a closer point
+    if (_range_mat(rowIdn, viscolumnIdn) != FLT_MAX && range > _range_mat(rowIdn, viscolumnIdn)) {
+        continue;
     }
 
     _range_mat(rowIdn, viscolumnIdn) = range;
@@ -510,6 +542,13 @@ void ImageProjection::projectPointCloud() {
 
 void ImageProjection::findStartEndAngle() {
   // start and end orientation of this cloud
+  if (_laser_cloud_in->points.empty()) {
+    RCLCPP_ERROR(this->get_logger(), "Point cloud is empty in findStartEndAngle!");
+    _seg_msg.start_orientation = 0.0;
+    _seg_msg.end_orientation = 2 * M_PI;
+    return;
+  }
+  
   auto point = _laser_cloud_in->points.front();
   _seg_msg.start_orientation = -std::atan2(point.y, point.x);
 
@@ -772,7 +811,11 @@ void ImageProjection::labelComponents(int row, int col) {
                     _range_mat(thisIndX, thisIndY));
 
       float alpha = (iter.x() == 0) ? _ang_resolution_X : _ang_resolution_Y;
-      float tang = (d2 * sin(alpha) / (d1 - d2 * cos(alpha)));
+      float denominator = d1 - d2 * cos(alpha);
+      if (fabs(denominator) < 1e-6) {
+        continue;
+      }
+      float tang = (d2 * sin(alpha) / denominator);
 
       if (tang > segmentThetaThreshold) {
         queue.push_back( {thisIndX, thisIndY } );

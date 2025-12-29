@@ -607,6 +607,10 @@ dddmr_sys_core::PlannerState Local_Planner::computeVelocityCommand(std::string t
   }
 
 
+  //@ Reset kd tree/observations because it is shared_ptr and copied from perception_ros
+  mpc_critics_ros_->getSharedDataPtr()->pcl_perception_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+  mpc_critics_ros_->getSharedDataPtr()->pcl_perception_kdtree_.reset(new pcl::KdTreeFLANN<pcl::PointXYZI>());
+
   if(best_traj.cost_<0){
     RCLCPP_WARN_THROTTLE(this->get_logger().get_child(name_), *clock_, 5000, "All trajectories are rejected by critics.");
     return dddmr_sys_core::ALL_TRAJECTORIES_FAIL;
@@ -614,10 +618,6 @@ dddmr_sys_core::PlannerState Local_Planner::computeVelocityCommand(std::string t
   else{
     return dddmr_sys_core::TRAJECTORY_FOUND;
   }
-  
-  //@ Reset kd tree/observations because it is shared_ptr and copied from perception_ros
-  mpc_critics_ros_->getSharedDataPtr()->pcl_perception_.reset(new pcl::PointCloud<pcl::PointXYZI>());
-  mpc_critics_ros_->getSharedDataPtr()->pcl_perception_kdtree_.reset(new pcl::KdTreeFLANN<pcl::PointXYZI>());
 }
 
 void Local_Planner::trajectory2posearray_cuboids(const base_trajectory::Trajectory& a_traj, 

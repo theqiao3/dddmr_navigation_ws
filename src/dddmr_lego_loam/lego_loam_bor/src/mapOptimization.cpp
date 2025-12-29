@@ -160,6 +160,8 @@ MapOptimization::MapOptimization(std::string name,
   trans_c2sensorlink.transform.rotation.x = -0.5; trans_c2sensorlink.transform.rotation.y = -0.5;
   trans_c2sensorlink.transform.rotation.z = -0.5; trans_c2sensorlink.transform.rotation.w = 0.5;
   
+  // [Modified] Disable static map->camera_init transform to avoid disconnected TF tree
+  // The dynamic map->odom transform will be published when algorithm runs
   tf_static_broadcaster_->sendTransform(trans_m2ci);
   
   trans_m2ci_af3_ = tf2::transformToEigen(trans_m2ci); //for pcl conversion
@@ -922,7 +924,7 @@ bool MapOptimization::detectLoopClosure() {
       ref_pt = cloudKeyPoses6D->points[j];
     }
 
-    if(accumulated_distance>20.0){
+    if(accumulated_distance>5.0){
       loop_closure_candidates.push_back(std::make_pair((cloudKeyPoses6D->points.size()-id), d_distance));
     }
 

@@ -201,6 +201,7 @@ int PointCloudSelectionTool::processMouseEvent(rviz_common::ViewportMouseEvent &
 }
 
 void PointCloudSelectionTool::publishSelected(rviz_common::ViewportMouseEvent & event){
+  (void)event;
   auto sel_manager = context_->getSelectionManager();
   rviz_common::interaction::M_Picked selection = sel_manager->getSelection();
   rviz_common::properties::PropertyTreeModel* model = sel_manager->getPropertyModel();

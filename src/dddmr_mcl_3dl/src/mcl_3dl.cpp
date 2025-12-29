@@ -107,6 +107,10 @@ bool MCL3dlNode::configure(const std::shared_ptr<mcl_3dl::SubMaps>& sub_maps)
       "initial_3d_pose", 2,
       std::bind(&MCL3dlNode::cbPosition, this, std::placeholders::_1), sub_options);
 
+  sub_cloud_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+      "cloud", 2,
+      std::bind(&MCL3dlNode::cbCloud, this, std::placeholders::_1), sub_options);
+
   lc_sharp_.subscribe(this, "laser_cloud_sharp");
   lc_less_sharp_.subscribe(this, "laser_cloud_less_sharp");
   lc_flat_.subscribe(this, "laser_cloud_flat");
@@ -258,6 +262,37 @@ bool MCL3dlNode::getBaselink2SensorAF3(std_msgs::msg::Header sensor_header, Eige
     trans_b2s_af3 = tf2::transformToEigen(trans_b2s_);
   }
   return true;
+}
+
+void MCL3dlNode::cbCloud(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
+{
+  std::unique_lock<std::mutex> lock(protect_measure_in_odomcb_);
+
+  if(!sub_maps_->isCurrentReady())
+    return;
+
+  Eigen::Affine3d trans_b2s_af3;
+  if(! getBaselink2SensorAF3(msg->header, trans_b2s_af3))
+    return;
+
+  pcl::PointCloud<mcl_3dl::pcl_t>::Ptr pc_cloud(new pcl::PointCloud<mcl_3dl::pcl_t>);
+  pcl::fromROSMsg(*msg, *pc_cloud);
+
+  // Set intensity to 1.0 to avoid division by zero in likelihood calculation
+  for (auto& p : pc_cloud->points)
+  {
+    p.intensity = 1.0f;
+  }
+
+  pcl::transformPointCloud(*pc_cloud, *pc_cloud, trans_b2s_af3);
+  pc_cloud->header.frame_id = params_->frame_ids_["base_link"];
+
+  pcl_segmentations_["less_sharp"] = pc_cloud;
+  
+  // Create empty cloud for flat to avoid issues
+  pcl::PointCloud<mcl_3dl::pcl_t>::Ptr pc_flat(new pcl::PointCloud<mcl_3dl::pcl_t>);
+  pc_flat->header.frame_id = params_->frame_ids_["base_link"];
+  pcl_segmentations_["flat"] = pc_flat;
 }
 
 void MCL3dlNode::cbLeGoFeatureCloud(const sensor_msgs::msg::PointCloud2::SharedPtr pc_sharpMsg,
@@ -460,7 +495,6 @@ void MCL3dlNode::cbLeGoFeatureCloud(const sensor_msgs::msg::PointCloud2::SharedP
   
   pcl_segmentations_[std::string("flat")] = pc_flat;
   pcl_segmentations_[std::string("less_sharp")] = pc_less_sharp_intensity;
-  
 }
 
 void MCL3dlNode::measure(std::map<std::string, pcl::PointCloud<mcl_3dl::pcl_t>::Ptr> pcl_segmentations)
@@ -920,8 +954,6 @@ void MCL3dlNode::normal2quaternion(pcl::PointCloud<pcl::PointNormal>::Ptr i_norm
   pub_pc_normal_.publish(markerArray);
 }
 */
-
-
 
 
 }  // namespace mcl_3dl

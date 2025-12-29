@@ -1,0 +1,202 @@
+# Ackermann version of dddmr_navigation.yaml
+# - Publishes /cmd_vel (Twist) as before; you can convert it externally to your drive-by-wire.
+# - Switches local planner trajectory generation to Ackermann kinematics.
+# - Disables rotate-in-place recovery (not feasible for Ackermann).
+# - Reduces perception load to mitigate 100% CPU and false-collision aborts.
+
+p2p_move_base:
+  ros__parameters:
+    controller_frequency: 10.0
+    planner_patience: 10.0
+    oscillation_distance: 5.0
+    oscillation_angle: 1.0
+    oscillation_patience: 15.0
+    controller_patience: 10.0
+    no_plan_retry_num: 10
+    waiting_patience: 10.0
+
+    # Use Ackermann trajectory generator for control loop
+    control_trajectory_generator_name: "ackermann_simple"
+
+    # Ackermann cannot rotate in place; skip heading-alignment phases
+    enable_initial_heading_align: false
+    enable_goal_heading_align: false
+
+global_plan_manager:
+  ros__parameters:
+    global_planner_action_name: "get_dwa_plan"
+    global_plan_query_frequency: 5.0
+
+local_planner:
+  ros__parameters:
+    # Make sure this matches your robot odometry topic.
+    odom_topic: /odometry/filtered
+    forward_prune: 3.0
+    backward_prune: 1.0
+    heading_tracking_distance: 0.5
+    heading_align_angle: 0.5
+    prune_plane_timeout: 3.0
+    xy_goal_tolerance: 0.3
+    yaw_goal_tolerance: 0.3
+    controller_frequency: 10.0
+
+    cuboid:
+      flb: [0.42, 0.36, 0.0]
+      frb: [0.42, -0.36, 0.0]
+      flt: [0.42, 0.36, 0.6]
+      frt: [0.42, -0.36, 0.6]
+      blb: [-0.35, 0.36, 0.0]
+      brb: [-0.35, -0.36, 0.0]
+      blt: [-0.35, 0.36, 0.6]
+      brt: [-0.35, -0.36, 0.6]
+
+trajectory_generators:
+  ros__parameters:
+    plugins: ["ackermann_simple"]
+
+    # Ackermann simple trajectory generator
+    # NOTE: please tune wheelbase/track_width/max_steering_angle to your robot.
+    ackermann_simple:
+      plugin: "trajectory_generators::AckermannSimpleTrajectoryGeneratorTheory"
+
+      min_vel_x: 0.15
+      max_vel_x: 1.0
+
+      # +/- 25deg
+      min_steering_angle: -0.436
+      max_steering_angle: 0.436
+
+      acc_lim_x: 1.0
+      acc_lim_steering: 1.0
+      deceleration_ratio: 2.0
+
+      wheelbase: 0.35
+      track_width: 0.72
+      robot_radius: 0.35
+
+      controller_frequency: 10.0
+      sim_time: 1.5
+      linear_x_sample: 5
+      steering_angle_sample: 7
+      sim_granularity: 0.1
+
+      cuboid:
+        flb: [0.42, 0.36, 0.0]
+        frb: [0.42, -0.36, 0.0]
+        flt: [0.42, 0.36, 0.6]
+        frt: [0.42, -0.36, 0.6]
+        blb: [-0.35, 0.36, 0.0]
+        brb: [-0.35, -0.36, 0.0]
+        blt: [-0.35, 0.36, 0.6]
+        brt: [-0.35, -0.36, 0.6]
+
+mpc_critics:
+  ros__parameters:
+    plugins: ["collision", "stick_path", "pure_pursuit", "toward_global_plan"]
+
+    collision:
+      plugin: "mpc_critics::CollisionModel"
+      trajectory_generator: ackermann_simple
+      weight: 1.0
+
+    stick_path:
+      plugin: "mpc_critics::StickPathModel"
+      trajectory_generator: ackermann_simple
+      weight: 0.1
+
+    pure_pursuit:
+      plugin: "mpc_critics::PurePursuitModel"
+      trajectory_generator: ackermann_simple
+      translation_weight: 1.0
+      orientation_weight: 0.01
+
+    toward_global_plan:
+      plugin: "mpc_critics::TowardGlobalPlanModel"
+      trajectory_generator: ackermann_simple
+      weight: 1.0
+
+perception_3d_local:
+  ros__parameters:
+    global_frame: "map"
+    robot_base_frame: "base_link"
+    max_obstacle_distance: 9999.0
+
+    # Smaller footprint reduces false collision
+    inscribed_radius: 0.3
+    inflation_descending_rate: 2.0
+    inflation_radius: 0.6
+
+    sensors_collected_frequency: 5.0
+    plugins: ["map", "path_blocked_strategy", "lidar"]
+
+    map:
+      plugin: "perception_3d::StaticLayer"
+      is_local_planner: true
+      mapping_mode: false
+      map_topic: "mapcloud"
+      ground_topic: "mapground"
+
+    path_blocked_strategy:
+      plugin: "perception_3d::PathBlockedStrategy"
+      check_radius: 0.3
+
+    lidar:
+      plugin: "perception_3d::MultiLayerSpinningLidar"
+      is_local_planner: true
+      topic: "/livox/lidar/pointcloud"
+      pub_gbl_marking_for_visualization: false
+      vertical_FOV_top: 15.0
+      vertical_FOV_bottom: -15.0
+      scan_effective_positive_start: 30.0
+      scan_effective_positive_end: 180.0
+      scan_effective_negative_start: -30.0
+      scan_effective_negative_end: -180.0
+      resolution: 0.1
+      height_resolution: 0.1
+      marking_height: 2.0
+      perception_window_size: 3.0
+      segmentation_ignore_ratio: 0.5
+      expected_sensor_time: 0.2
+
+perception_3d_global:
+  ros__parameters:
+    global_frame: "map"
+    robot_base_frame: "base_link"
+    max_obstacle_distance: 9999.0
+
+    inscribed_radius: 0.3
+    inflation_descending_rate: 2.0
+    inflation_radius: 0.6
+
+    sensors_collected_frequency: 3.0
+
+    # Global layer uses only static map to avoid heavy mark/clear on live lidar
+    plugins: ["map"]
+    dgraph_publish_frequency: 1.0
+
+    map:
+      plugin: "perception_3d::StaticLayer"
+      is_local_planner: false
+      use_adaptive_connection: false
+      adaptive_connection_number: 20
+      radius_of_ground_connection: 1.5
+      intensity_search_radius: 1.0
+      intensity_search_punish_weight: 0.1
+      static_imposing_radius: 1.5
+      map_topic: "mapcloud"
+      ground_topic: "mapground"
+      support:
+        mapping_mode: false
+        enable_edge_detection: true
+        generate_static_graph: false
+
+global_planner:
+  ros__parameters:
+    turning_weight: 0.1
+    enable_detail_log: false
+    a_star_expanding_radius: 0.5
+
+dynamic_window_aware_global_planner:
+  ros__parameters:
+    look_ahead_distance: 2.0
+    recompute_frequency: 5.0

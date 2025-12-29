@@ -78,6 +78,31 @@ void P2PMoveBase::initial(const std::shared_ptr<local_planner::Local_Planner>& l
   GPM_ = gpm;
 
   FSM_ = std::make_shared<p2p_move_base::FSM>(this->get_node_logging_interface(), this->get_node_parameters_interface());
+
+  // Trajectory generator selection (default matches legacy differential-drive config)
+  this->declare_parameter("control_trajectory_generator_name", rclcpp::ParameterValue("differential_drive_simple"));
+  (void)this->get_parameter("control_trajectory_generator_name", control_trajectory_generator_name_);
+  RCLCPP_INFO(this->get_logger(), "control_trajectory_generator_name: %s", control_trajectory_generator_name_.c_str());
+
+  this->declare_parameter(
+    "heading_align_trajectory_generator_name",
+    rclcpp::ParameterValue("differential_drive_rotate_shortest_angle"));
+  (void)this->get_parameter("heading_align_trajectory_generator_name", heading_align_trajectory_generator_name_);
+  RCLCPP_INFO(this->get_logger(), "heading_align_trajectory_generator_name: %s", heading_align_trajectory_generator_name_.c_str());
+
+  this->declare_parameter(
+    "goal_heading_align_trajectory_generator_name",
+    rclcpp::ParameterValue("differential_drive_rotate_shortest_angle"));
+  (void)this->get_parameter("goal_heading_align_trajectory_generator_name", goal_heading_align_trajectory_generator_name_);
+  RCLCPP_INFO(this->get_logger(), "goal_heading_align_trajectory_generator_name: %s", goal_heading_align_trajectory_generator_name_.c_str());
+
+  this->declare_parameter("enable_initial_heading_align", rclcpp::ParameterValue(true));
+  (void)this->get_parameter("enable_initial_heading_align", enable_initial_heading_align_);
+  RCLCPP_INFO(this->get_logger(), "enable_initial_heading_align: %d", enable_initial_heading_align_);
+
+  this->declare_parameter("enable_goal_heading_align", rclcpp::ParameterValue(true));
+  (void)this->get_parameter("enable_goal_heading_align", enable_goal_heading_align_);
+  RCLCPP_INFO(this->get_logger(), "enable_goal_heading_align: %d", enable_goal_heading_align_);
   
   if(FSM_->use_twist_stamped_){
     stamped_cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::TwistStamped>("cmd_vel_stamped", 1);
@@ -299,7 +324,11 @@ bool P2PMoveBase::executeCycle(const std::shared_ptr<rclcpp_action::ServerGoalHa
         else{
           FSM_->last_valid_plan_ = clock_->now();
           LP_->setPlan(plan);
-          FSM_->setDecision("d_align_heading");  
+          if (enable_initial_heading_align_) {
+            FSM_->setDecision("d_align_heading");
+          } else {
+            FSM_->setDecision("d_controlling");
+          }
         }
       }
 
@@ -330,7 +359,7 @@ bool P2PMoveBase::executeCycle(const std::shared_ptr<rclcpp_action::ServerGoalHa
         }
         
         base_trajectory::Trajectory best_traj;
-        dddmr_sys_core::PlannerState PS = LP_->computeVelocityCommand("differential_drive_rotate_shortest_angle", best_traj);
+        dddmr_sys_core::PlannerState PS = LP_->computeVelocityCommand(heading_align_trajectory_generator_name_, best_traj);
 
         if(PS == dddmr_sys_core::PlannerState::TRAJECTORY_FOUND){
           FSM_->last_valid_control_ = clock_->now();
@@ -407,7 +436,7 @@ bool P2PMoveBase::executeCycle(const std::shared_ptr<rclcpp_action::ServerGoalHa
         }
         
         base_trajectory::Trajectory best_traj;
-        dddmr_sys_core::PlannerState PS = LP_->computeVelocityCommand("differential_drive_rotate_shortest_angle", best_traj);
+        dddmr_sys_core::PlannerState PS = LP_->computeVelocityCommand(goal_heading_align_trajectory_generator_name_, best_traj);
 
         if(PS == dddmr_sys_core::PlannerState::TRAJECTORY_FOUND){
           FSM_->last_valid_control_ = clock_->now();
@@ -461,8 +490,15 @@ bool P2PMoveBase::executeCycle(const std::shared_ptr<rclcpp_action::ServerGoalHa
       //@Check is goal xy tolerance reach
       if(LP_->isGoalReached()){
         publishZeroVelocity();
-        RCLCPP_INFO(this->get_logger(), "Goal xy tolerance reach, switch to align goal heading state.");
-        FSM_->setDecision("d_align_goal_heading");  
+        if (enable_goal_heading_align_) {
+          RCLCPP_INFO(this->get_logger(), "Goal xy tolerance reach, switch to align goal heading state.");
+          FSM_->setDecision("d_align_goal_heading");
+        } else {
+          RCLCPP_INFO(this->get_logger(), "Goal reach (xy). Goal heading align disabled; succeed now.");
+          auto result = std::make_shared<dddmr_sys_core::action::PToPMoveBase::Result>();
+          goal_handle->succeed(result);
+          return true;
+        }
         return false;
       }
       
@@ -484,7 +520,7 @@ bool P2PMoveBase::executeCycle(const std::shared_ptr<rclcpp_action::ServerGoalHa
       }
 
       base_trajectory::Trajectory best_traj;
-      dddmr_sys_core::PlannerState PS = LP_->computeVelocityCommand("differential_drive_simple", best_traj);
+      dddmr_sys_core::PlannerState PS = LP_->computeVelocityCommand(control_trajectory_generator_name_, best_traj);
 
       if(PS == dddmr_sys_core::PlannerState::TRAJECTORY_FOUND){
         FSM_->last_valid_control_ = clock_->now();
@@ -522,6 +558,8 @@ bool P2PMoveBase::executeCycle(const std::shared_ptr<rclcpp_action::ServerGoalHa
           FSM_->setDecision("d_planning");  
         }
 
+        // Keep publishing zero to make output observable and safe.
+        publishZeroVelocity();
         return false;
       }
 
@@ -599,7 +637,7 @@ bool P2PMoveBase::executeCycle(const std::shared_ptr<rclcpp_action::ServerGoalHa
         LP_->setPlan(plan);
       }
       base_trajectory::Trajectory best_traj;
-      dddmr_sys_core::PlannerState PS = LP_->computeVelocityCommand("differential_drive_simple", best_traj);
+      dddmr_sys_core::PlannerState PS = LP_->computeVelocityCommand(control_trajectory_generator_name_, best_traj);
 
       if(PS == dddmr_sys_core::PlannerState::TRAJECTORY_FOUND){
         FSM_->last_valid_control_ = clock_->now();
@@ -638,6 +676,8 @@ bool P2PMoveBase::executeCycle(const std::shared_ptr<rclcpp_action::ServerGoalHa
           FSM_->last_valid_plan_ = clock_->now();
           FSM_->setDecision("d_planning");  
         }
+
+        publishZeroVelocity();
       }
 
       else if(PS == dddmr_sys_core::PlannerState::PATH_BLOCKED_WAIT || PS == dddmr_sys_core::PlannerState::PATH_BLOCKED_REPLANNING){

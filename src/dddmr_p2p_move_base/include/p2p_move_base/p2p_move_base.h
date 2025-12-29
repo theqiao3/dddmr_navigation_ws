@@ -96,6 +96,13 @@ class P2PMoveBase : public rclcpp::Node {
     std::shared_ptr<local_planner::Local_Planner> LP_;
     std::shared_ptr<p2p_move_base::P2PGlobalPlanManager> GPM_;
 
+    // Trajectory generator names used by the FSM control loop
+    std::string control_trajectory_generator_name_;
+    std::string heading_align_trajectory_generator_name_;
+    std::string goal_heading_align_trajectory_generator_name_;
+    bool enable_initial_heading_align_{true};
+    bool enable_goal_heading_align_{true};
+
     void executeCb(const std::shared_ptr<rclcpp_action::ServerGoalHandle<dddmr_sys_core::action::PToPMoveBase>> goal_handle);
 
     bool executeCycle(const std::shared_ptr<rclcpp_action::ServerGoalHandle<dddmr_sys_core::action::PToPMoveBase>> goal_handle);

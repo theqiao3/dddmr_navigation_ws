@@ -1,0 +1,269 @@
+p2p_move_base:
+  ros__parameters:
+    controller_frequency: 10.0
+    planner_patience: 10.0
+    oscillation_distance: 5.0
+    oscillation_angle: 1.0
+    oscillation_patience: 15.0
+    controller_patience: 10.0
+    no_plan_retry_num: 10
+    waiting_patience: 10.0
+
+global_plan_manager:
+  ros__parameters:
+    global_planner_action_name: "get_dwa_plan"
+    global_plan_query_frequency: 5.0
+
+# MID360激光雷达配置
+mcl_ip:
+  ros__parameters:
+    laser:
+        odom_type: "wheel_odometry"
+        baselink_frame: "base_link"
+        num_vertical_scans: 32
+        num_horizontal_scans: 1000
+        ground_scan_index: 16
+        vertical_angle_bottom: -7.0
+        vertical_angle_top: 52.0
+        scan_period: 0.1
+
+    imageProjection:
+        segment_valid_point_num: 5
+        segment_valid_line_num: 2
+        segment_theta: 60.0
+        maximum_detection_range: 120.0
+        distance_for_patch_between_rings: 1.0
+        minimum_detection_range: 0.5
+
+mcl_fa:
+  ros__parameters:
+    featureAssociation:
+        edge_threshold: 0.1
+        surf_threshold: 0.1
+        nearest_feature_search_distance: 3.0
+        
+sub_maps:
+  ros__parameters:
+    pose_graph_dir: "/root/dddmr_bags/ackermann_robot_map"
+    sub_map_search_radius: 50.0
+    sub_map_warmup_trigger_distance: 20.0
+    complete_map_voxel_size: 0.4
+
+mcl_3dl:
+  ros__parameters:
+    init_x: 0.0
+    init_y: 0.0
+    init_z: 0.0
+    init_roll: 0.0
+    init_pitch: 0.0
+    init_yaw: 0.0
+    init_var_x: 2.0
+    init_var_y: 2.0
+    init_var_z: 0.5
+    init_var_roll: 0.1
+    init_var_pitch: 0.1
+    init_var_yaw: 0.5
+    map_frame: "map"
+    robot_frame: "base_link"
+    odom_frame: "odom"
+    map_downsample_x: 0.1
+    map_downsample_y: 0.1
+    map_downsample_z: 0.1
+    map_update_interval_sec: 2
+    num_particles: 60
+
+    resample_var_x: 0.2
+    resample_var_y: 0.2
+    resample_var_z: 0.2
+    resample_var_yaw: 0.1
+    resample_var_pitch: 0.2
+    resample_var_roll: 0.2
+    expansion_var_x: 0.5
+    expansion_var_y: 0.5
+    expansion_var_z: 0.5
+    expansion_var_roll: 0.2
+    expansion_var_pitch: 0.2
+    expansion_var_yaw: 0.2
+    match_ratio_thresh: 0.0
+
+    euc_cluster_distance: 0.8
+    euc_cluster_min_size: 3
+    euc_cluster_max_size: 2400
+
+    knn_num_of_ground_normals: 20
+
+    update_min_d: 0.1
+    update_min_a: 0.1
+
+    odom_err_lin_lin: 0.6
+    odom_err_lin_ang: 0.3
+    odom_err_ang_lin: 0.3
+    odom_err_ang_ang: 0.6
+
+    odom_err_integ_lin_tc: 5.0
+    odom_err_integ_ang_tc: 10.0
+
+    lpf_step: 2.0
+    acc_lpf_step: 128.0
+
+    jump_dist: 1.0
+    jump_ang: 1.57
+
+    bias_var_dist: 2.0
+    bias_var_ang: 1.57
+    tf_tolerance: 0.1
+    publish_tf: true
+
+    likelihood:
+      num_points_global: 8
+      match_dist_min: 0.3
+      match_dist_flat: 0.05
+      threshold_for_trusted_ground: 6
+      radius_of_ground_search: 1.0
+
+local_planner:
+  ros__parameters:
+    odom_topic: odom
+    forward_prune: 3.0
+    backward_prune: 1.0
+    heading_tracking_distance: 0.5
+    heading_align_angle: 0.5
+    prune_plane_timeout: 3.0
+    xy_goal_tolerance: 0.3
+    yaw_goal_tolerance: 0.3
+    controller_frequency: 10.0
+    
+    # ========================================
+    # 碰撞检测立方体
+    # 轴距: 0.45m (前后), 轮距: 0.3m (左右)
+    # base_link 在底盘中心
+    # ========================================
+    cuboid:
+      # 前轴位置（base_link中心前方0.225m）
+      flb: [0.225, 0.15, 0.0]   # 前左下
+      frb: [0.225, -0.15, 0.0]  # 前右下
+      flt: [0.225, 0.15, 0.5]   # 前左上
+      frt: [0.225, -0.15, 0.5]  # 前右上
+      
+      # 后轴位置（base_link中心后方0.225m）
+      blb: [-0.225, 0.15, 0.0]  # 后左下
+      brb: [-0.225, -0.15, 0.0] # 后右下
+      blt: [-0.225, 0.15, 0.5]  # 后左上
+      brt: [-0.225, -0.15, 0.5] # 后右上
+
+recovery_behaviors:
+  ros__parameters:
+    plugins: ["rotate_inplace"]
+    rotate_inplace:
+      plugin: "recovery_behaviors::RotateInPlaceBehavior"
+      frequency: 10.0
+      tolerance: 0.3
+      trajectory_generator_name: "differential_drive_rotate_inplace"
+
+# ========================================
+# 轨迹生成器配置（应急方案）
+# ========================================
+# 使用差分驱动规划器，但通过以下方式适配阿克曼机器人：
+# 1. 严格限制 max_vel_theta，对应25°转向角
+# 2. 降低速度，为转向留出余量
+# 3. 在底层驱动中进行角速度→转向角转换
+# ========================================
+trajectory_generators:
+  ros__parameters:
+    plugins: ["differential_drive_simple", "differential_drive_rotate_inplace", "differential_drive_rotate_shortest_angle"]
+    
+    differential_drive_rotate_shortest_angle:
+      plugin: "trajectory_generators::DDRotateInplaceTheory"
+      controller_frequency: 10.0
+      rotation_speed: 0.5
+      cuboid:
+        flb: [0.225, 0.15, 0.0]
+        frb: [0.225, -0.15, 0.0]
+        flt: [0.225, 0.15, 0.5]
+        frt: [0.225, -0.15, 0.5]
+        blb: [-0.225, 0.15, 0.0]
+        brb: [-0.225, -0.15, 0.0]
+        blt: [-0.225, 0.15, 0.5]
+        brt: [-0.225, -0.15, 0.5]
+
+    differential_drive_rotate_inplace:
+      plugin: "trajectory_generators::DDRotateInplaceTheory"
+      controller_frequency: 10.0
+      rotation_speed: 0.5
+      cuboid:
+        flb: [0.225, 0.15, 0.0]
+        frb: [0.225, -0.15, 0.0]
+        flt: [0.225, 0.15, 0.5]
+        frt: [0.225, -0.15, 0.5]
+        blb: [-0.225, 0.15, 0.0]
+        brb: [-0.225, -0.15, 0.0]
+        blt: [-0.225, 0.15, 0.5]
+        brt: [-0.225, -0.15, 0.5]
+    
+    differential_drive_simple:
+      plugin: "trajectory_generators::DDSimpleTrajectoryGeneratorTheory"
+      
+      # ========== 关键参数：速度限制 ==========
+      # 限制速度为 0.8 m/s 以给转向留出余量
+      max_vel_x: 0.8
+      min_vel_x: 0.15
+      
+      # ========== 关键参数：转向限制 ==========
+      # 使用 max_vel_theta 作为转向角的代理
+      # max_vel_theta 对应 25°，min_vel_theta 对应最小转向
+      # 
+      # 理论计算：
+      # 你的阿克曼机器人: ω = v·tan(δ)/L = 0.8·tan(25°)/0.45 = 0.8·0.466/0.45 ≈ 0.83 rad/s
+      # 所以设定 max_vel_theta = 0.83
+      # 
+      # 但为了安全，我们使用更保守的值 0.6
+      # 这对应: δ = arctan(0.6 × 0.45 / 0.8) = arctan(0.3375) ≈ 18.6°
+      max_vel_theta: 0.6        # 对应约18°转向角（保守值）
+      min_vel_theta: 0.1
+      
+      # 加速度限制
+      acc_lim_x: 1.0
+      acc_lim_theta: 0.3        # 降低转向加速度以适应转向机构
+      deceleration_ratio: 2.0
+      
+      # 电机约束参数（根据你的实际电机调整）
+      use_motor_constraint: false
+      max_motor_shaft_rpm: 3000.0
+      wheel_diameter: 0.2        # 调整为你实际的轮径
+      gear_ratio: 1.0
+      robot_radius: 0.25
+      
+      # 规划器参数
+      controller_frequency: 10.0
+      sim_time: 1.0
+      
+      # 采样参数
+      linear_x_sample: 8         # 降低采样数以加快计算
+      angular_z_sample: 5        # 转向采样更少
+      sim_granularity: 0.1
+      angular_sim_granularity: 0.1
+
+# ========================================
+# 应急方案的批注
+# ========================================
+#
+# 为什么选择这些参数值？
+#
+# 1. max_vel_x = 0.8
+#    - 原因：给转向机构留出时间反应
+#    - 如果速度太高，转向无法及时跟上
+#
+# 2. max_vel_theta = 0.6
+#    - 原因：转向能力的保守估计
+#    - 实际最大ω ≈ 0.83，但我们用0.6确保安全
+#    - 不会要求超过机器人能力的转向
+#
+# 3. acc_lim_theta = 0.3
+#    - 原因：转向执行器可能响应慢
+#    - 降低加速度防止超调
+#
+# 4. cuboid参数
+#    - 前轴后移225mm: base_link前0.225m（450mm÷2）
+#    - 轮距150mm: ±150mm（300mm÷2）
+#
+# ========================================

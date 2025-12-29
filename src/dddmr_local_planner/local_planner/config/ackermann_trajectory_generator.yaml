@@ -1,0 +1,94 @@
+# Ackermann 轨迹生成器配置
+# 用于轮式阿克曼转向机器人（例如 ROS2 Mini车）
+# 机器人参数: 轴距L=0.45m, 履迹宽度d=0.3m, 最大转向角=25°
+
+local_planner:
+  ros__parameters:
+    # 局部规划频率
+    controller_frequency: 10.0  # Hz
+    sim_time: 1.0  # 秒，轨迹规划时域
+    
+    # 轨迹生成器配置
+    trajectory_generator_type: "trajectory_generators::AckermannSimpleTrajectoryGeneratorTheory"
+    
+    # ============ Ackermann 速度限制 ============
+    ackermann_simple_trajectory_generator_theory:
+      # 线性速度限制
+      min_vel_x: 0.1  # m/s，最小前进速度
+      max_vel_x: 1.2  # m/s，最大前进速度
+      
+      # 转向角限制 (弧度)
+      # 25° = 0.436 rad, -25° = -0.436 rad
+      min_steering_angle: -0.436  # rad (-25°)
+      max_steering_angle: 0.436   # rad (25°)
+      
+      # 加速度限制
+      acc_lim_x: 1.0  # m/s²，线性加速度
+      acc_lim_steering: 1.0  # rad/s²，转向角加速度
+      
+      # 减速比例
+      deceleration_ratio: 2.0
+      
+      # ============ 机器人几何参数 (Ackermann特有) ============
+      wheelbase: 0.45  # m，前后轮之间的距离
+      track_width: 0.3  # m，左右轮之间的距离
+      robot_radius: 0.25  # m，外接圆半径
+      
+      # ============ 轨迹采样参数 ============
+      # 线性速度采样点数（更多点=更细致的规划，但计算量增加）
+      linear_x_sample: 5
+      
+      # 转向角采样点数（更多点=覆盖更多转向选项）
+      steering_angle_sample: 7
+      
+      # 模拟粒度（更小=更精确，但计算量增加）
+      sim_granularity: 0.1  # m
+      
+      # ============ 碰撞检测 (立方体顶点) ============
+      # 定义机器人周围的立方体，用于碰撞检测
+      # 坐标：(x, y, z)，单位：米
+      # frb = front right bottom (前右下)
+      # flb = front left bottom (前左下)
+      # frt = front right top (前右上)
+      # flt = front left top (前左上)
+      # brb = back right bottom (后右下)
+      # blb = back left bottom (后左下)
+      # brt = back right top (后右上)
+      # blt = back left top (后左上)
+      
+      cuboid:
+        flb: [0.2, -0.15, -0.25]  # 前左下
+        frb: [0.2, 0.15, -0.25]   # 前右下
+        flt: [0.2, -0.15, 0.25]   # 前左上
+        frt: [0.2, 0.15, 0.25]    # 前右上
+        blb: [-0.25, -0.15, -0.25] # 后左下
+        brb: [-0.25, 0.15, -0.25]  # 后右下
+        blt: [-0.25, -0.15, 0.25]  # 后左上
+        brt: [-0.25, 0.15, 0.25]   # 后右上
+
+# ============ 局部成本函数配置 ============
+# 用于评估不同的轨迹（哪个轨迹更好）
+local_planner_critic:
+  ros__parameters:
+    # 路径对齐评估（0-1，值越大越优先使用）
+    path_align: 0.5
+    
+    # 到目标的接近度评估
+    path_dist: 0.5
+    
+    # 速度评估
+    velocity: 0.1
+    
+    # 最大速度阈值
+    max_vel: 1.2  # m/s
+    
+    # 转向角/曲率评估（阿克曼转向中的平滑性）
+    steering_angle: 0.3
+
+# ============ Ackermann 特定的优化建议 ============
+# 1. 转向角范围应该匹配实际机器人限制 (±25°)
+# 2. 线性速度和转向角耦合：高速时，可达到的最大转向角减小
+# 3. 最小转向半径 R_min = L / tan(δ_max) = 0.45 / tan(25°) = 0.95m
+# 4. 最大角速度 ω_max = v·tan(δ_max) / L = 1.2·tan(25°) / 0.45 = 1.2 rad/s
+# 5. 采样点数越多，规划精度越高，但计算成本增加
+# 6. sim_granularity 影响轨迹模拟的精度（影响碰撞检测准确性）

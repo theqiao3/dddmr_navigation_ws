@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(lego_loam_bor)
 
+cmake_policy(SET CMP0074 NEW)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -30,7 +32,7 @@ find_package(pcl_conversions REQUIRED)
 
 find_package(Boost REQUIRED COMPONENTS filesystem serialization system thread date_time regex timer chrono)
 find_package(GTSAM REQUIRED)
-find_package(PCL 1.15 REQUIRED QUIET)
+find_package(PCL REQUIRED QUIET)
 find_package(OpenCV REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(image_geometry REQUIRED)
@@ -245,6 +247,18 @@ ament_target_dependencies(lego_loam
   ${dependencies}
 )
 
+#cloud preprocessor node (point cloud voxel filtering)
+add_executable(cloud_preprocessor
+  src/cloud_preprocessor_node.cpp
+  src/cloudPreprocessor.cpp
+)
+target_link_libraries(cloud_preprocessor
+  ${PCL_LIBRARIES}
+)
+ament_target_dependencies(cloud_preprocessor
+  ${dependencies}
+)
+
 #pose graph editor node
 add_executable(pose_graph_editor_node
   src/pose_graph_editor/pose_graph_editor_node.cpp
@@ -368,6 +382,7 @@ install(TARGETS
   mcl_feature
   lego_loam
   lego_loam_bag
+  cloud_preprocessor
   pose_graph_editor_node
   pointcloud2occupancy
   optimized_icp_gn_playground
