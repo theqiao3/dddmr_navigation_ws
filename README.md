@@ -34,10 +34,14 @@
 你也可以直接在仓库中播放测试视频：
 
 <p align='center'>
-  <video width="640" controls>
-    <source src="image/test1.mp4" type="video/mp4">
-    您的浏览器不支持 video 标签，请下载 `image/test1.mp4` 在本地查看。
-  </video>
+  <!-- GitHub README does not support inline <video> playback. Use a linked thumbnail so users can click to open the MP4 file in GitHub's file viewer. -->
+  <a href="image/test1.mp4">
+    <img src="image/ground_point and plan.png" alt="Play test video" width="640" />
+  </a>
+</p>
+
+<p align='center'>
+  点击图片在 GitHub 上打开并播放 `image/test1.mp4`，或直接下载以在本地查看。
 </p>
 
 ---
