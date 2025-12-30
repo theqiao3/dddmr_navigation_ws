@@ -373,8 +373,10 @@ geometry_msgs::msg::TransformStamped Local_Planner::getGlobalPose(){
 
 void Local_Planner::prunePlan(double forward_distance, double backward_distance){
 
-  if(pcl_global_plan_->points.size()<3)
+  if(pcl_global_plan_->points.size()<3){
+    RCLCPP_WARN_THROTTLE(this->get_logger().get_child(name_), *clock_, 5000, "Global plan size < 3, skipping prune.");
     return;
+  }
 
   prune_plan_.poses.clear();
   pcl_prune_plan_.clear();
@@ -387,13 +389,13 @@ void Local_Planner::prunePlan(double forward_distance, double backward_distance)
   robot_pose.z = trans_gbl2b_.transform.translation.z;
 
   if ( kdtree_global_plan_->nearestKSearch (robot_pose, 1, pointIdxNKNSearch, pointNKNSquaredDistance) <= 0 ){
-    RCLCPP_DEBUG(this->get_logger().get_child(name_), "Ready to fix some exception here.");
+    RCLCPP_WARN_THROTTLE(this->get_logger().get_child(name_), *clock_, 5000, "NearestKSearch failed in prunePlan.");
     return;
   }
 
 
-  if(sqrt(pointNKNSquaredDistance[0])>1.0){
-    RCLCPP_DEBUG(this->get_logger().get_child(name_), "Deviate from plan, fix some exception here.");
+  if(sqrt(pointNKNSquaredDistance[0])>5.0){
+    RCLCPP_WARN_THROTTLE(this->get_logger().get_child(name_), *clock_, 5000, "Deviate from plan (%.2f > 5.0), fix some exception here.", sqrt(pointNKNSquaredDistance[0]));
     //@ consider to clear prune_plan in model_shared_data?
     return;
   }

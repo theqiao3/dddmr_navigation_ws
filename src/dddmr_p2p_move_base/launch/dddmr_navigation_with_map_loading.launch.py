@@ -34,7 +34,7 @@ def generate_launch_description():
     map_file_arg = DeclareLaunchArgument(
         'map_file',
         default_value=os.path.join(os.path.expanduser('~'), 
-                                   'dddmr_navigation_ws', 'src', 'lego_map', 'map.pcd'),
+                                   'lego_ddd_nav_ws', 'src', 'dddmr_navigation_ws', 'src', 'lego_map', 'map.pcd'),
         description='Path to the PCD map file for localization (from lego_map folder)'
     )
 
@@ -58,7 +58,8 @@ def generate_launch_description():
     # P2P Move Base Node (includes Local Planner, Controller, etc.)
     p2p_move_base_node = ExecuteProcess(
         cmd=['ros2', 'run', 'p2p_move_base', 'p2p_move_base_node', 
-             '--ros-args', '--params-file', LaunchConfiguration('config_file')],
+             '--ros-args', '--params-file', LaunchConfiguration('config_file'),
+             '-p', 'use_twist_stamped:=false'],
         output='screen'
     )
     

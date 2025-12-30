@@ -14,6 +14,7 @@ class Nav2dGoalSub():
     def __init__(self, node, m_callback_group):
         self.node_ = node
         self.subscription = self.node_.create_subscription(PoseStamped, 'goal_pose_3d', self.goalCB, 3, callback_group=m_callback_group)
+        self.subscription_standard = self.node_.create_subscription(PoseStamped, '/goal_pose', self.goalCB, 3, callback_group=m_callback_group)
         self.subscription2 = self.node_.create_subscription(PointStamped, 'clicked_point', self.clicked_pointCB, 3, callback_group=m_callback_group)
         self._action_client = ActionClient(self.node_, PToPMoveBase, 'p2p_move_base')
         self.nav2d_goal = []

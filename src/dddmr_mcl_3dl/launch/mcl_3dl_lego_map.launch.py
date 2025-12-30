@@ -45,7 +45,7 @@ def generate_launch_description():
         'map_file',
         default_value=os.path.join(
             os.path.expanduser('~'),
-            'dddmr_navigation_ws', 'src', 'lego_map', 'map.pcd'
+            'lego_ddd_nav_ws', 'src', 'dddmr_navigation_ws', 'src', 'lego_map', 'map.pcd'
         ),
         description='Path to the main PCD map file'
     )
@@ -55,7 +55,7 @@ def generate_launch_description():
         'ground_file',
         default_value=os.path.join(
             os.path.expanduser('~'),
-            'dddmr_navigation_ws', 'src', 'lego_map', 'ground.pcd'
+            'lego_ddd_nav_ws', 'src', 'dddmr_navigation_ws', 'src', 'lego_map', 'ground.pcd'
         ),
         description='Path to the ground PCD file (optional)'
     )
@@ -65,7 +65,7 @@ def generate_launch_description():
         'pose_graph_dir',
         default_value=os.path.join(
             os.path.expanduser('~'),
-            'dddmr_navigation_ws', 'src', 'lego_map', 'pcd'
+            'lego_ddd_nav_ws', 'src', 'dddmr_navigation_ws', 'src', 'lego_map', 'pcd'
         ),
         description='Path to the pose graph (sub-maps) directory'
     )
@@ -80,7 +80,7 @@ def generate_launch_description():
     # 激光话题参数
     lidar_topic_arg = DeclareLaunchArgument(
         'lidar_topic',
-        default_value='/livox/lidar/pointcloud',
+        default_value='/livox/lidar/pointcloud_filtered',
         description='Topic name for LiDAR point cloud'
     )
     
@@ -141,6 +141,11 @@ def generate_launch_description():
         remappings=[
             ('odom', LaunchConfiguration('odom_topic')),
             ('cloud', LaunchConfiguration('lidar_topic')),
+        ],
+        arguments=[
+            '--ros-args',
+            '-p', ['sub_maps:pose_graph_dir:=', LaunchConfiguration('pose_graph_dir')],
+            '-p', ['mcl_3dl:publish_tf:=', LaunchConfiguration('publish_tf')]
         ]
     )
 

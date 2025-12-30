@@ -1,48 +1,83 @@
 # 🤖 dddmr_navigation
 # 🤖 dddmr_navigation
 
-## 🚀 Latest Update: MID360 LiDAR Support
-**Great news!** We have adapted the DDDMR Navigation Stack to support the MID360 360° LiDAR sensor (MID 360). This includes configuration files, launch samples, and tested workflows for mapping, localization and planning on Ackermann-type robots using MID360 pointclouds. See the detailed Ackermann guide for step-by-step instructions and parameter examples: `ACKERMANN_FULL_DEBUG_GUIDE.md`.
+## 🚀 最新更新：支持 MID360 360° 激光雷达
+**好消息！** 我们已为 DDDMR Navigation Stack 适配了 MID360（MID 360）360° 激光雷达。适配内容包括配置文件、示例启动文件以及在 Ackermann 转向车辆上的映射、定位与规划的验证流程与参数示例。详细步骤请参见 `ACKERMANN_FULL_DEBUG_GUIDE.md`。
 
-👉 Try the ACKERMANN setup or check the MID360-specific configs in `src/dddmr_lego_loam` and `src/dddmr_mcl_3dl`.
-
----
-
-## 🚀 Highlights & New Demos
-We continue to support a wide range of mobile platforms (including Ackermann steering vehicles and quadrupeds) and sensors. Recent additions include:
-
-- MID360 (360° LiDAR) mapping & localization configs
-- Ackermann-specific planning and control examples
-- Demo images and sample outputs (embedded below)
-
-<p align='center'>
-  <img src="image/map.png" alt="map demo" width="640" />
-</p>
-
-<p align='center'>
-  <img src="image/ground.png" alt="ground segmentation demo" width="320" style="margin-right:12px;" />
-  <img src="image/pcd and pose.png" alt="pcd and pose demo" width="320" />
-</p>
+👉 可以优先查看 `src/dddmr_lego_loam` 与 `src/dddmr_mcl_3dl` 中的 MID360 专用配置和 launch 文件。
 
 ---
 
-> **Note:** DDDMR Navigation Stack is designed to extend what 2D stacks (e.g., Nav2) can do — multi-level mapping, ramp navigation, 3D perception-based planning and semantic clearings.
+## 🚀 亮点与演示
+我们继续支持多种平台（包含 Ackermann 转向车辆与四足机器人）与传感器。近期新增与优化包括：
 
-## ✅ Why choose DDDMR (3D Navigation)?
+- **MID360（360° LiDAR）建图与定位配置**
+- **Ackermann 定制化规划与控制示例**
+- **演示图片与示例输出（已内嵌）**
 
-- Familiar workflow for 2D navigation users: map → localize → plan & navigate
-- Handles complex terrains (ramps, multi-floor environments)
-- Works on cost-effective hardware (e.g., MID360, 16-line lidar, NUC/Jetson)
+<p align='center'>
+  <img src="image/map.png" alt="地图演示" width="640" />
+</p>
+
+<p align='center'>
+  <img src="image/ground.png" alt="地面分割演示" width="320" style="margin-right:12px;" />
+  <img src="image/pcd and pose.png" alt="点云与位姿演示" width="320" />
+</p>
+
+### 新增：全局规划演示 & 测试视频 🎬
+我们新增了**全局规划演示图**和测试录像用于展示规划结果与点云匹配情况：
+
+<p align='center'>
+  <img src="image/ground_point and plan.png" alt="全局规划演示" width="640" />
+</p>
+
+你也可以直接在仓库中播放测试视频：
+
+<p align='center'>
+  <video width="640" controls>
+    <source src="image/test1.mp4" type="video/mp4">
+    您的浏览器不支持 video 标签，请下载 `image/test1.mp4` 在本地查看。
+  </video>
+</p>
+
+---
+
+> **说明：** DDDMR Navigation Stack 是对传统 2D 导航（如 Nav2）的扩展，支持多层地图、坡道/斜坡导航、基于点云的三维感知和语义清理等功能。
+
+## ✅ 为什么选择 DDDMR（3D 导航）？
+
+- 与 2D 导航用户工作流一致：建图 → 定位 → 规划与导航
+- 能应对复杂地形（坡道、多层场景）
+- 支持经济性硬件（例如 MID360、16 线激光雷达、Intel NUC/Jetson 等）
 
 <p align='center'>
     <img src="https://github.com/dfl-rlab/dddmr_documentation_materials/blob/main/dddmr_navigation/navigation_diagram.png" width="780" height="560"/>
 </p>
 
-🤝 We thank contributors and projects like [Navigation](https://github.com/ros-planning/navigation) and [Navigation2](https://github.com/ros-navigation/navigation2).
+感谢来自 [Navigation](https://github.com/ros-planning/navigation) 与 [Navigation2](https://github.com/ros-navigation/navigation2) 等开源项目的贡献与启发。
 
-If you're getting started, check the beginner's guide: [dddmr_beginner_guide](https://github.com/dfl-rlab/dddmr_navigation/tree/main/src/dddmr_beginner_guide)
+如果刚入门，请查看入门指南： [dddmr_beginner_guide](https://github.com/dfl-rlab/dddmr_navigation/tree/main/src/dddmr_beginner_guide)
 
-## 🏁 Detailed documentation for each package
+## 🛠 快速上手（简要）
+
+1. 启动 MID360 驱动并发布点云与 IMU：
+```bash
+# 示例：依赖 livox_ros_driver2 或您使用的 MID360 驱动
+ros2 launch livox_ros_driver2 msg_MID360_launch.py
+```
+2. 启动建图或在线建图（示例）：
+```bash
+ros2 launch lego_loam_bor lego_loam_ackermann_mid360.launch.py
+```
+3. 启动定位：
+```bash
+ros2 launch dddmr_mcl_3dl mcl_3dl.launch.py config_file:=ackermann_mid360_localization.yaml
+```
+更多细节请参阅 `ACKERMANN_FULL_DEBUG_GUIDE.md` 中的完整配置和调试步骤。
+
+---
+
+## 🏁 各包详细文档
 <details><summary> <b>💡 Click me to see Mapping</b> </summary>
 https://github.com/dfl-rlab/dddmr_navigation/tree/main/src/dddmr_lego_loam
 </details>
