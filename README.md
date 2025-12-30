@@ -2,14 +2,14 @@
 # 🤖 dddmr_navigation
 
 ## 🚀 最新更新：支持 MID360 360° 激光雷达
-**好消息！** 我们已为 DDDMR Navigation Stack 适配了 MID360（MID 360）360° 激光雷达。适配内容包括配置文件、示例启动文件以及在 Ackermann 转向车辆上的映射、定位与规划的验证流程与参数示例。详细步骤请参见 `ACKERMANN_FULL_DEBUG_GUIDE.md`。
+已为 DDDMR Navigation Stack 适配了 MID360（MID 360）360° 激光雷达。适配内容包括配置文件、示例启动文件以及在 Ackermann 转向车辆上的建图、定位与规划的验证流程与参数示例。
 
 👉 可以优先查看 `src/dddmr_lego_loam` 与 `src/dddmr_mcl_3dl` 中的 MID360 专用配置和 launch 文件。
 
 ---
 
 ## 🚀 亮点与演示
-我们继续支持多种平台（包含 Ackermann 转向车辆与四足机器人）与传感器。近期新增与优化包括：
+近期新增与优化包括：
 
 - **MID360（360° LiDAR）建图与定位配置**
 - **Ackermann 定制化规划与控制示例**
@@ -38,9 +38,6 @@
   <img src="image/test1.gif" alt="Demo GIF - global planning" width="640" />
 </p>
 
-<p align='center'>
-  若需更高清的视频文件，请下载原始 MP4：<a href="image/test1.mp4">image/test1.mp4</a>
-</p>
 
 ---
 
@@ -62,20 +59,23 @@
 
 ## 🛠 快速上手（简要）
 
-1. 启动 MID360 驱动并发布点云与 IMU：
+1. 启动底盘和激光雷达：
 ```bash
 # 示例：依赖 livox_ros_driver2 或您使用的 MID360 驱动
-ros2 launch livox_ros_driver2 msg_MID360_launch.py
+ros2 launch tianracer_bringup tianracer_bringup.launch.py
 ```
 2. 启动建图或在线建图（示例）：
 ```bash
-ros2 launch lego_loam_bor lego_loam_ackermann_mid360.launch.py
+在线：ros2 launch lego_loam_bor lego_loam_ackermann_mid360.launch.py 
+离线：ros2 launch lego_loam_bor lego_loam_ackermann_mid360_bag.launch.py #rosbag位置在launch文件中更改
+建完保存：ros2 service call /save_mapped_point_cloud std_srvs/srv/Empty {} #地图将会被保存到src文件夹下类似“lego_map2025_12_29_10_13_05“下，其中”2025_12_29_10_13_05“是rosbag包相关名，根据不同的包而更改，请将该文件内所有文件移到lego_map文件夹中用于被加载
 ```
-3. 启动定位：
+3. 启动定位导航：
 ```bash
-ros2 launch dddmr_mcl_3dl mcl_3dl.launch.py config_file:=ackermann_mid360_localization.yaml
+定位：ros2 launch dddmr_mcl_3dl mcl_3dl.launch.py config_file:=ackermann_mid360_localization.yaml
+规划导航：ros2 launch p2p_move_base dddmr_navigation_with_map_loading.launch.py
 ```
-更多细节请参阅 `ACKERMANN_FULL_DEBUG_GUIDE.md` 中的完整配置和调试步骤。
+
 
 ---
 
