@@ -66,9 +66,9 @@ ros2 launch tianracer_bringup tianracer_bringup.launch.py
 ```
 2. 启动建图或在线建图（示例）：
 ```bash
-在线：ros2 launch lego_loam_bor lego_loam_ackermann_mid360.launch.py 
+在线：ros2 launch lego_loam_bor lego_loam_ackermann_mid360.launch.py #目前受制于主控性能等原因，在线建图容易卡出
 离线：ros2 launch lego_loam_bor lego_loam_ackermann_mid360_bag.launch.py #rosbag位置在launch文件中更改
-建完保存：ros2 service call /save_mapped_point_cloud std_srvs/srv/Empty {} #地图将会被保存到src文件夹下类似“lego_map2025_12_29_10_13_05“下，其中”2025_12_29_10_13_05“是rosbag包相关名，根据不同的包而更改，请将该文件内所有文件移到lego_map文件夹中用于被加载
+建完保存：ros2 service call /save_mapped_point_cloud std_srvs/srv/Empty {} #地图将会被保存到src文件夹下类似“lego_map2025_12_29_10_13_05“下，其中”2025_12_29_10_13_05“是保存日期，根据不同的包而更改，请将该文件内所有文件移到lego_map文件夹中用于被加载
 ```
 3. 启动定位导航：
 ```bash

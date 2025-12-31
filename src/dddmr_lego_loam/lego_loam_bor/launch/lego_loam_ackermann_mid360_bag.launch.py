@@ -10,7 +10,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     pkg_share = get_package_share_directory('lego_loam_bor')
-    config_file = os.path.join(pkg_share, 'config', 'loam_ackermann_mid360_config.yaml')
+    config_file = os.path.join(pkg_share, 'config', 'loam_bag_ackermann_mid360_config.yaml')
     rviz_config = os.path.join(pkg_share, 'rviz', 'lego_loam.rviz')
 
     declare_lidar_topic = DeclareLaunchArgument(
